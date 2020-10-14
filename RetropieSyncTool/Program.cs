@@ -10,49 +10,66 @@ namespace RetropieSyncTool
 {
     class Program
     {
+        protected static bool isPushToHost = true;// false; //pull
+        protected static bool isFetchArtwork = true;
+        protected static string sourceHost = "192.168.1.149";
+        protected static string destinationHost = "192.168.1.117";//"192.168.1.117";
+
+        // Setup session options
+        static SessionOptions sessionOptions = new SessionOptions
+        {
+            GiveUpSecurityAndAcceptAnySshHostKey = true,
+            Protocol = Protocol.Sftp,
+            HostName = isPushToHost ? destinationHost : sourceHost,//"192.168.1.117",//"192.168.1.149",
+            UserName = "pi",
+            Password = "raspberry"// ,SshHostKeyFingerprint = "ssh-rsa 2048 xxxxxxxxxxx...="
+        };
+
         static void Main(string[] args)
+        {
+            FetchArtwork();
+        }
+
+
+
+        protected static void FetchArtwork()
         {
             try
             {
-                bool isPushToHost = false; //pull
-                string sourceHost = "192.168.1.149";
-                string destinationHost = "192.168.1.117";
-
-                // Setup session options
-                SessionOptions sessionOptions = new SessionOptions
-                {
-                    GiveUpSecurityAndAcceptAnySshHostKey = true,
-                    Protocol = Protocol.Sftp,
-                    HostName = destinationHost,//"192.168.1.117",//"192.168.1.149",
-                    UserName = "pi",
-                    Password = "raspberry"// ,SshHostKeyFingerprint = "ssh-rsa 2048 xxxxxxxxxxx...="
-                };
-
-
-                List<string> romFolders = new List<string>() { "mame-libretro", "fba" };
+                List<string> artFolders = new List<string>() { "downloaded_images", "gamelists" };
 
                 using (Session session = new Session())
                 {
+                    session.FileTransferred += FileTransferred;
+                    session.Failed += Session_Failed;
                     // Connect
                     session.Open(sessionOptions);
 
                     // Download files
                     TransferOptions transferOptions = new TransferOptions();
                     transferOptions.TransferMode = TransferMode.Binary;
+                    transferOptions.AddRawSettings("FtpListAll", "0");
 
-                    foreach (string folder in romFolders)
+                    foreach (string folder in artFolders)
                     {
                         TransferOperationResult transferResult = null;
 
-                        if (!isPushToHost) //Pull Sync
+                        if (isPushToHost) //Push
                         {
-                            transferResult = session.GetFiles($"/home/pi/RetroPie/roms/{folder}/*", $@"D:\RetroPie\RetroPieSync\{sourceHost}\roms\{folder}\", false, transferOptions);
+                            string remotePath = $"/home/pi/.emulationstation/{folder}/";
+                            string localPath = $@"D:\RetroPie\RetroPieSync\{sourceHost}\{folder}\*";
+
+                            transferResult = session.PutFiles(localPath, remotePath, false, transferOptions);
+
                         }
-                        else //Push
+                        else //Pull Sync
                         {
-                            transferResult = session.PutFiles($@"D:\RetroPie\RetroPieSync\{sourceHost}\roms\{folder}\", $"/home/pi/RetroPie/roms/{folder}/*", false, transferOptions);
+                            string remotePath = $"/home/pi/.emulationstation/{folder}/*";
+                            string localPath = $@"D:\RetroPie\RetroPieSync\{destinationHost}\{folder}\";
+
+                            transferResult = session.GetFiles(remotePath, localPath, false, transferOptions);
                         }
-                        
+
                         // Throw on any error
                         transferResult.Check();
 
@@ -64,37 +81,91 @@ namespace RetropieSyncTool
                     }
 
                 }
-                //using (Session session = new Session())
-                //{
-                //    // Connect
-                //    session.Open(sessionOptions);
 
-                //    // Download files
-                //    TransferOptions transferOptions = new TransferOptions();
-                //    transferOptions.TransferMode = TransferMode.Binary;
-
-                //    foreach(string folder in romFolders)
-                //    {
-                //        TransferOperationResult transferResult = session.GetFiles($"/home/pi/RetroPie/roms/{folder}/*", $@"D:\RetroPie\RetroPieSync\{sessionOptions.HostName}\roms\{folder}\", false, transferOptions);
-
-                //        // Throw on any error
-                //        transferResult.Check();
-
-                //        // Print results
-                //        foreach (TransferEventArgs transfer in transferResult.Transfers)
-                //        {
-                //            Debug.WriteLine("Download of {0} succeeded", transfer.FileName);
-                //        }
-                //    }
-
-                //}
 
             }
             catch (Exception e)
             {
                 Debug.WriteLine("Error: {0}", e);
-                
+
             }
+        }
+
+        protected void FetchRoms()
+        {
+            try
+            {
+
+                List<string> romFolders = new List<string>() { "fba" };//, "mame-libretro" };
+
+                using (Session session = new Session())
+                {
+                    session.FileTransferred += FileTransferred;
+                    session.Failed += Session_Failed;
+                    // Connect
+                    session.Open(sessionOptions);
+
+                    // Download files
+                    TransferOptions transferOptions = new TransferOptions();
+                    transferOptions.TransferMode = TransferMode.Binary;
+                    transferOptions.AddRawSettings("FtpListAll", "0");
+
+                    foreach (string folder in romFolders)
+                    {
+                        TransferOperationResult transferResult = null;
+
+                        if (isPushToHost) //Push
+                        {
+                            string remotePath = $"/home/pi/RetroPie/roms/{folder}/*";
+                            string localPath = $@"D:\RetroPie\RetroPieSync\{destinationHost}\roms\{folder}\*";
+
+                            if (isFetchArtwork)
+                            {
+                                remotePath = $"/home/pi/.emulationstation/downloaded_images/*";
+                                localPath = $@"D:\RetroPie\RetroPieSync\{sourceHost}\downloaded_images\";
+                            }
+
+                            transferResult = session.PutFiles(localPath, remotePath, false, transferOptions);
+
+                        }
+                        else //Pull Sync
+                        {
+                            string remotePath = $"/home/pi/RetroPie/roms/{folder}/*";
+                            string localPath = $@"D:\RetroPie\RetroPieSync\{sourceHost}\roms\";
+
+                            if (isFetchArtwork)
+                            {
+                                remotePath = $"/home/pi/.emulationstation/downloaded_images/*";
+                                localPath = $@"D:\RetroPie\RetroPieSync\{destinationHost}\downloaded_images\";
+                            }
+
+                            transferResult = session.GetFiles(remotePath, localPath, false, transferOptions);
+                        }
+
+                        // Throw on any error
+                        transferResult.Check();
+
+                        // Print results
+                        foreach (TransferEventArgs transfer in transferResult.Transfers)
+                        {
+                            Debug.WriteLine("Download of {0} succeeded", transfer.FileName);
+                        }
+                    }
+
+                }
+
+
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("Error: {0}", e);
+
+            }
+        }
+
+        private static void Session_Failed(object sender, FailedEventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         private static void FileTransferred(object sender, TransferEventArgs e)
