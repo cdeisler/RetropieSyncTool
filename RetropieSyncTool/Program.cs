@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,10 +11,12 @@ namespace RetropieSyncTool
 {
     class Program
     {
+        protected static bool fetchArtwork = false;
+        protected static bool fetchConfig = true;
         protected static bool isPushToHost = true;// false; //pull
         protected static bool isFetchArtwork = true;
         protected static string sourceHost = "192.168.1.149";
-        protected static string destinationHost = "192.168.1.117";//"192.168.1.117";
+        protected static string destinationHost = "192.168.1.117";//"192.168.1.117";//"192.168.1.117";
 
         // Setup session options
         static SessionOptions sessionOptions = new SessionOptions
@@ -27,10 +30,66 @@ namespace RetropieSyncTool
 
         static void Main(string[] args)
         {
-            FetchArtwork();
+            if (fetchArtwork) FetchArtwork();
+            if (fetchConfig) FetchConfig();
         }
 
+        protected static void FetchConfig()
+        {
+            ///opt/retropie/configs/*.cfg
+            try
+            {
+                using (Session session = new Session())
+                {
+                    session.FileTransferred += FileTransferred;
+                    session.Failed += Session_Failed;
+                    // Connect
+                    session.Open(sessionOptions);
 
+                    // Download files
+                    TransferOptions transferOptions = new TransferOptions();
+                    transferOptions.TransferMode = TransferMode.Binary;
+                    transferOptions.AddRawSettings("FtpListAll", "0");
+
+                    TransferOperationResult transferResult = null;
+
+                    if (isPushToHost) //Push
+                    {
+                        string remotePath = $"/opt/retropie/configs/fba/";
+                        string localPath = $@"D:\RetroPie\RetroPieSync\{sourceHost}\configs\fba\*";
+
+                        Directory.CreateDirectory(localPath.Replace("*", ""));
+
+                        transferResult = session.PutFiles(localPath, remotePath, false, transferOptions);
+
+                    }
+                    else //Pull Sync
+                    {
+                        string remotePath = $"/opt/retropie/configs/fba/*";
+                        string localPath = $@"D:\RetroPie\RetroPieSync\{destinationHost}\configs\fba\";
+
+                        Directory.CreateDirectory(localPath.Replace("*", ""));
+
+                        transferResult = session.GetFiles(remotePath, localPath, false, transferOptions);
+                    }
+
+                    // Throw on any error
+                    transferResult.Check();
+
+                    // Print results
+                    foreach (TransferEventArgs transfer in transferResult.Transfers)
+                    {
+                        Debug.WriteLine("Download of {0} succeeded", transfer.FileName);
+                    }
+
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("Error: {0}", e);
+
+            }
+        }
 
         protected static void FetchArtwork()
         {
