@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Renci.SshNet;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -12,7 +13,7 @@ namespace RetropieSyncTool
     class Program
     {
         protected static bool fetchArtwork = false;
-        protected static bool fetchConfig = true;
+        protected static bool fetchConfig = false;
         protected static bool isPushToHost = true;// false; //pull
         protected static bool isFetchArtwork = true;
         protected static string sourceHost = "192.168.1.149";
@@ -30,8 +31,36 @@ namespace RetropieSyncTool
 
         static void Main(string[] args)
         {
+            //emulationstation
+            //ps -ef | awk '/emulation/ {print $2}' | xargs kill
+
+            //kill $(pidof emulationstation)
+
+
+            var command = @"/opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2000/mame2000_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg /home/pi/RetroPie/roms/arcade/robotron.zip --appendconfig /opt/retropie/configs/all/retroarch.cfg";
+            //var command = "'/opt/retropie/supplementary/runcommand/runcommand.sh' 0 SYS arcade '/home/pi/RetroPie/roms/arcade/1941.zip'";//mame-mame4all
+            //var command = "subprocess.Popen('/opt/retropie/supplementary/runcommand/runcommand.sh', '0', '_SYS_', 'arcade' '/home/pi/RetroPie/roms/arcade/1941.zip')";
+            //
+            RunSSHCommand(new SshClient("192.168.1.148", "pi", "raspberry"), command);
             if (fetchArtwork) FetchArtwork();
             if (fetchConfig) FetchConfig();
+        }
+
+        protected static void RunSSHCommand(SshClient client, string commandText)
+        {
+            using (client)// var client = new SshClient("192.168.1.149", "pi", "raspberry"))
+            {
+                client.Connect();
+                var command = client.RunCommand(commandText);//.Execute();
+                if (!string.IsNullOrEmpty(command.Error))
+                {
+                    var error = command.Error;
+                } else
+                {
+                    var output = command.Result;
+                }
+                
+            }
         }
 
         protected static void FetchConfig()
@@ -39,7 +68,7 @@ namespace RetropieSyncTool
             ///opt/retropie/configs/*.cfg
             try
             {
-                using (Session session = new Session())
+                using (var session = new WinSCP.Session())
                 {
                     session.FileTransferred += FileTransferred;
                     session.Failed += Session_Failed;
@@ -97,7 +126,7 @@ namespace RetropieSyncTool
             {
                 List<string> artFolders = new List<string>() { "downloaded_images", "gamelists" };
 
-                using (Session session = new Session())
+                using (var session = new WinSCP.Session())
                 {
                     session.FileTransferred += FileTransferred;
                     session.Failed += Session_Failed;
@@ -157,7 +186,7 @@ namespace RetropieSyncTool
 
                 List<string> romFolders = new List<string>() { "fba" };//, "mame-libretro" };
 
-                using (Session session = new Session())
+                using (var session = new WinSCP.Session())
                 {
                     session.FileTransferred += FileTransferred;
                     session.Failed += Session_Failed;
