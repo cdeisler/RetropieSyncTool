@@ -41,7 +41,7 @@ namespace RetropieSyncTool
             //var command = "'/opt/retropie/supplementary/runcommand/runcommand.sh' 0 SYS arcade '/home/pi/RetroPie/roms/arcade/1941.zip'";//mame-mame4all
             //var command = "subprocess.Popen('/opt/retropie/supplementary/runcommand/runcommand.sh', '0', '_SYS_', 'arcade' '/home/pi/RetroPie/roms/arcade/1941.zip')";
             //
-            RunSSHCommand(new SshClient("192.168.1.148", "pi", "raspberry"), command);
+            RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { "ps -ef | awk '/emulation/ {print $2}' | xargs kill",  command });
             if (fetchArtwork) FetchArtwork();
             if (fetchConfig) FetchConfig();
         }
@@ -60,6 +60,27 @@ namespace RetropieSyncTool
                     var output = command.Result;
                 }
                 
+            }
+        }
+
+        protected static void RunSSHCommands(SshClient client, string[] commands)
+        {
+            using (client)// var client = new SshClient("192.168.1.149", "pi", "raspberry"))
+            {
+                client.Connect();
+
+                foreach(var cmd in commands)
+                {
+                    var command = client.RunCommand(cmd);//.Execute();
+                    if (!string.IsNullOrEmpty(command.Error))
+                    {
+                        var error = command.Error;
+                    }
+                    else
+                    {
+                        var output = command.Result;
+                    }
+                }
             }
         }
 
