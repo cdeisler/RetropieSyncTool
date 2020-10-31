@@ -44,9 +44,11 @@ namespace RetropieSyncTool
             //var command = "subprocess.Popen('/opt/retropie/supplementary/runcommand/runcommand.sh', '0', '_SYS_', 'arcade' '/home/pi/RetroPie/roms/arcade/1941.zip')";
             //
             //RunSSHCommand(new SshClient("192.168.1.149", "pi", "raspberry"), "sudo reboot");
+            RunRandomRom("192.168.1.117");
 
             RunRandomRom("192.168.1.149");
             RunRandomRom("192.168.1.148");
+          
             //RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { killEmuStation,  command });
             if (fetchArtwork) FetchArtwork();
             if (fetchConfig) FetchConfig();
@@ -198,6 +200,10 @@ namespace RetropieSyncTool
                         if (result.IsSuccess)
                         {
                             Console.WriteLine(result.Output);
+                            if (result.Output.Contains("not supported"))
+                            {
+                                Console.WriteLine(result.Output);
+                            }
                         }
                         else
                         {
