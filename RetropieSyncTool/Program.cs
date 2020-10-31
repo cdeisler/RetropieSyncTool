@@ -19,6 +19,9 @@ namespace RetropieSyncTool
         protected static string sourceHost = "192.168.1.149";
         protected static string destinationHost = "192.168.1.117";//"192.168.1.117";//"192.168.1.117";
 
+        protected static string killEmuStation = "sudo ps -ef | awk '/emulation/ {print $2}' | xargs kill";
+        protected static string killMame = "sudo ps -ef | awk '/mame/ {print $2}' | xargs sudo kill -9 2092";
+        protected static string shutDown = "sudo shutdown -h now";
         // Setup session options
         static SessionOptions sessionOptions = new SessionOptions
         {
@@ -36,14 +39,89 @@ namespace RetropieSyncTool
 
             //kill $(pidof emulationstation)
 
-
-            var command = @"/opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2000/mame2000_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg /home/pi/RetroPie/roms/arcade/robotron.zip --appendconfig /opt/retropie/configs/all/retroarch.cfg";
+            //var command = @"/opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2000/mame2000_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg /home/pi/RetroPie/roms/arcade/robotron.zip --appendconfig /opt/retropie/configs/all/retroarch.cfg";
             //var command = "'/opt/retropie/supplementary/runcommand/runcommand.sh' 0 SYS arcade '/home/pi/RetroPie/roms/arcade/1941.zip'";//mame-mame4all
             //var command = "subprocess.Popen('/opt/retropie/supplementary/runcommand/runcommand.sh', '0', '_SYS_', 'arcade' '/home/pi/RetroPie/roms/arcade/1941.zip')";
             //
-            RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { "ps -ef | awk '/emulation/ {print $2}' | xargs kill",  command });
+            //RunSSHCommand(new SshClient("192.168.1.149", "pi", "raspberry"), "sudo reboot");
+
+            RunRandomRom("192.168.1.149");
+            RunRandomRom("192.168.1.148");
+            //RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { killEmuStation,  command });
             if (fetchArtwork) FetchArtwork();
             if (fetchConfig) FetchConfig();
+        }
+
+        protected static string GetRunRomCommand(RemoteFileInfo rfi) //string romPath, string system = "mame2000"
+        {
+            Uri uri = new Uri($"file:/{rfi.FullName}"); //, UriKind.Relative
+            var parent = uri.Segments[uri.Segments.Length - 2].Replace("/", "");//.GetParentUriString(uri);
+
+            if (parent == "fba") parent = "fbneo";
+
+            var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi.FullName} --appendconfig /opt/retropie/configs/all/retroarch.cfg";
+            Console.WriteLine($"run command:\r\n{command}");
+            return command;
+        }
+
+        static string GetParentUriString(Uri uri)
+        {
+            return uri.AbsoluteUri.Remove(uri.AbsoluteUri.Length - uri.Segments.Last().Length);
+        }
+
+        protected static void RunRandomRom(string ipClient)
+        {
+            RemoteFileInfo randomRom;
+            using (var session = new WinSCP.Session())
+            {
+                session.Open(new SessionOptions
+                {
+                    GiveUpSecurityAndAcceptAnySshHostKey = true,
+                    Protocol = Protocol.Sftp,
+                    HostName = ipClient,
+                    UserName = "pi",
+                    Password = "raspberry"
+                });
+
+                var directories = session.EnumerateRemoteFiles("/home/pi/RetroPie/roms/", "", EnumerationOptions.MatchDirectories);
+                var dirct = directories.Count();
+
+                List<RemoteFileInfo> romsByPath = new List<RemoteFileInfo>();
+
+                foreach(RemoteFileInfo di in directories)
+                {
+                    Console.WriteLine($"{di.FullName}");
+
+                    var fileInfos = session.EnumerateRemoteFiles(di.FullName, "*.zip", EnumerationOptions.None).ToList();//.Select(fi => fi.FullName).ToList();
+
+                    if (fileInfos.Count > 0)
+                    {
+                        Console.WriteLine($"Writing {fileInfos.Count} files from path: {di.FullName}");
+                        romsByPath.AddRange(fileInfos);
+                    }
+                    else
+                    {
+                        //Console.WriteLine($"Nothing found at {di.FullName}");
+                    }
+                    
+                    //romsByPath.Add(di.FullName);
+                }
+
+
+
+                var r = new Random();
+                randomRom = romsByPath.ElementAt(r.Next(1, romsByPath.Count()));
+
+                Console.WriteLine($"Attempting to run {randomRom.FullName}");
+                //foreach (RemoteFileInfo fileInfo in fileInfos)
+                //{
+                //    Console.WriteLine("Adding {0} to listing", fileInfo.Name);
+                //}
+            }
+            string command = GetRunRomCommand(randomRom);
+
+            ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, command, "exit" });
+            //RunSSHCommands(new SshClient(ipClient, "pi", "raspberry"), new string[] { killEmuStation, killMame, command });
         }
 
         protected static void RunSSHCommand(SshClient client, string commandText)
@@ -71,16 +149,86 @@ namespace RetropieSyncTool
 
                 foreach(var cmd in commands)
                 {
-                    var command = client.RunCommand(cmd);//.Execute();
-                    if (!string.IsNullOrEmpty(command.Error))
-                    {
-                        var error = command.Error;
-                    }
-                    else
-                    {
-                        var output = command.Result;
-                    }
+                    Task.Run(() => {
+
+                        var command = client.RunCommand(cmd);//.Execute();
+                        if (!string.IsNullOrEmpty(command.Error))
+                        {
+                            var error = command.Error;
+                            Console.WriteLine(error);
+                        }
+                        else
+                        {
+                            var output = command.Result;
+                            Console.WriteLine(output);
+                        }
+
+                    });
                 }
+                client.Disconnect();
+            }
+        }
+
+        protected static void ExecuteSSHCommands(string ipClient, string[] commands)
+        {
+            using (var session = new WinSCP.Session())
+            {
+                session.AddRawConfiguration("ExitCode1IsError", "1");
+
+                session.Open(new SessionOptions
+                {
+                    GiveUpSecurityAndAcceptAnySshHostKey = true,
+                    Protocol = Protocol.Sftp,
+                    HostName = ipClient,
+                    UserName = "pi",
+                    Password = "raspberry"
+                });
+
+                foreach (var cmd in commands)
+                {
+                    //Task.Run(() => {
+
+                    try
+                    {
+                        var result = session.ExecuteCommand(cmd);
+
+                        if (result.IsSuccess)
+                        {
+                            Console.WriteLine(result.Output);
+                        }
+                        else
+                        {
+                            if (result.ErrorOutput != null && !result.ErrorOutput.Contains("No such process"))
+                            {
+                                Console.WriteLine(result.ErrorOutput);
+                            }
+                            else
+                            {
+                                Console.WriteLine(result.ErrorOutput);
+                            }
+                        }
+                    }
+                    catch (Exception exc)
+                    {
+                        Console.WriteLine($"{exc.Message}");
+                    }
+
+
+                }
+                        //var command = client.RunCommand(cmd);//.Execute();
+                        //if (!string.IsNullOrEmpty(command.Error))
+                        //{
+                        //    var error = command.Error;
+                        //    Console.WriteLine(error);
+                        //}
+                        //else
+                        //{
+                        //    var output = command.Result;
+                        //    Console.WriteLine(output);
+                        //}
+
+                    //});
+                //}
             }
         }
 
