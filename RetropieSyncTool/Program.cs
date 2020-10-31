@@ -19,7 +19,7 @@ namespace RetropieSyncTool
         protected static string sourceHost = "192.168.1.149";
         protected static string destinationHost = "192.168.1.117";//"192.168.1.117";//"192.168.1.117";
 
-        protected static string killEmuStation = "sudo ps -ef | awk '/emulation/ {print $2}' | xargs kill";
+        protected static string killEmuStation = "sudo ps -ef | awk '/emulation/ {print $2}' | xargs sudo kill -9 2092";
         protected static string killMame = "sudo ps -ef | awk '/mame/ {print $2}' | xargs sudo kill -9 2092";
         protected static string shutDown = "sudo shutdown -h now";
         // Setup session options
@@ -58,6 +58,7 @@ namespace RetropieSyncTool
             var parent = uri.Segments[uri.Segments.Length - 2].Replace("/", "");//.GetParentUriString(uri);
 
             if (parent == "fba") parent = "fbneo";
+            if (parent == "arcade") parent = "mame2000";
 
             var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi.FullName} --appendconfig /opt/retropie/configs/all/retroarch.cfg";
             Console.WriteLine($"run command:\r\n{command}");
@@ -74,6 +75,7 @@ namespace RetropieSyncTool
             RemoteFileInfo randomRom;
             using (var session = new WinSCP.Session())
             {
+                //session.Timeout = TimeSpan.FromSeconds(10);
                 session.Open(new SessionOptions
                 {
                     GiveUpSecurityAndAcceptAnySshHostKey = true,
@@ -120,7 +122,7 @@ namespace RetropieSyncTool
             }
             string command = GetRunRomCommand(randomRom);
 
-            ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, command, "exit" });
+            ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, command });
             //RunSSHCommands(new SshClient(ipClient, "pi", "raspberry"), new string[] { killEmuStation, killMame, command });
         }
 
@@ -173,6 +175,7 @@ namespace RetropieSyncTool
         {
             using (var session = new WinSCP.Session())
             {
+                session.Timeout = TimeSpan.FromSeconds(5);
                 session.AddRawConfiguration("ExitCode1IsError", "1");
 
                 session.Open(new SessionOptions
@@ -198,13 +201,20 @@ namespace RetropieSyncTool
                         }
                         else
                         {
-                            if (result.ErrorOutput != null && !result.ErrorOutput.Contains("No such process"))
+                            if (result.ErrorOutput != null)
                             {
-                                Console.WriteLine(result.ErrorOutput);
-                            }
-                            else
-                            {
-                                Console.WriteLine(result.ErrorOutput);
+                                if (result.ErrorOutput.Contains("No such process"))
+                                {
+                                    Console.WriteLine(result.ErrorOutput);
+                                }
+                                else if (result.ErrorOutput.Contains("not supported"))
+                                {
+                                    Console.WriteLine(result.ErrorOutput);
+                                }
+                                else
+                                {
+                                    Console.WriteLine(result.ErrorOutput);
+                                }
                             }
                         }
                     }
