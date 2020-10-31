@@ -44,25 +44,29 @@ namespace RetropieSyncTool
             //var command = "subprocess.Popen('/opt/retropie/supplementary/runcommand/runcommand.sh', '0', '_SYS_', 'arcade' '/home/pi/RetroPie/roms/arcade/1941.zip')";
             //
             //RunSSHCommand(new SshClient("192.168.1.149", "pi", "raspberry"), "sudo reboot");
-            RunRandomRom("192.168.1.117");
 
-            RunRandomRom("192.168.1.149");
+
+            //RunRandomRom("192.168.1.117");
+            RunRom("192.168.1.117", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
+
             RunRandomRom("192.168.1.148");
+            RunRandomRom("192.168.1.149");
+
           
             //RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { killEmuStation,  command });
             if (fetchArtwork) FetchArtwork();
             if (fetchConfig) FetchConfig();
         }
 
-        protected static string GetRunRomCommand(RemoteFileInfo rfi) //string romPath, string system = "mame2000"
+        protected static string GetRunRomCommand(string rfi) //string romPath, string system = "mame2000"
         {
-            Uri uri = new Uri($"file:/{rfi.FullName}"); //, UriKind.Relative
+            Uri uri = new Uri($"file:/{rfi}"); //, UriKind.Relative
             var parent = uri.Segments[uri.Segments.Length - 2].Replace("/", "");//.GetParentUriString(uri);
 
             if (parent == "fba") parent = "fbneo";
             if (parent == "arcade") parent = "mame2000";
 
-            var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi.FullName} --appendconfig /opt/retropie/configs/all/retroarch.cfg";
+            var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg";
             Console.WriteLine($"run command:\r\n{command}");
             return command;
         }
@@ -72,6 +76,33 @@ namespace RetropieSyncTool
             return uri.AbsoluteUri.Remove(uri.AbsoluteUri.Length - uri.Segments.Last().Length);
         }
 
+        protected static void RunRom(string ipClient, string romPath)
+        {
+            ///home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip
+            ///
+            using (var session = new WinSCP.Session())
+            {
+                //session.Timeout = TimeSpan.FromSeconds(10);
+                session.Open(new SessionOptions
+                {
+                    GiveUpSecurityAndAcceptAnySshHostKey = true,
+                    Protocol = Protocol.Sftp,
+                    HostName = ipClient,
+                    UserName = "pi",
+                    Password = "raspberry"
+                });
+
+
+                Console.WriteLine($"Attempting to run {romPath}");
+
+                string command = GetRunRomCommand(romPath);
+
+                ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, command });
+
+            }
+
+        }
+        
         protected static void RunRandomRom(string ipClient)
         {
             RemoteFileInfo randomRom;
@@ -110,9 +141,7 @@ namespace RetropieSyncTool
                     
                     //romsByPath.Add(di.FullName);
                 }
-
-
-
+                
                 var r = new Random();
                 randomRom = romsByPath.ElementAt(r.Next(1, romsByPath.Count()));
 
@@ -122,7 +151,7 @@ namespace RetropieSyncTool
                 //    Console.WriteLine("Adding {0} to listing", fileInfo.Name);
                 //}
             }
-            string command = GetRunRomCommand(randomRom);
+            string command = GetRunRomCommand(randomRom.FullName);
 
             ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, command });
             //RunSSHCommands(new SshClient(ipClient, "pi", "raspberry"), new string[] { killEmuStation, killMame, command });
@@ -231,20 +260,6 @@ namespace RetropieSyncTool
 
 
                 }
-                        //var command = client.RunCommand(cmd);//.Execute();
-                        //if (!string.IsNullOrEmpty(command.Error))
-                        //{
-                        //    var error = command.Error;
-                        //    Console.WriteLine(error);
-                        //}
-                        //else
-                        //{
-                        //    var output = command.Result;
-                        //    Console.WriteLine(output);
-                        //}
-
-                    //});
-                //}
             }
         }
 
