@@ -22,6 +22,12 @@ namespace RetropieSyncTool
         protected static string killEmuStation = "sudo ps -ef | awk '/emulation/ {print $2}' | xargs sudo kill -9 2092";
         protected static string killMame = "sudo ps -ef | awk '/mame/ {print $2}' | xargs sudo kill -9 2092";
         protected static string shutDown = "sudo shutdown -h now";
+        protected static string reboot = "sudo reboot";
+
+        //"{} 0 _SYS_ {} '{}'".format( RUNCOMMAND, system, path )
+        protected static string RUNCOMMAND = "/opt/retropie/supplementary/runcommand/runcommand.sh";
+        protected static string EMULATIONSTATION = "/opt/retropie/supplementary/emulationstation/emulationstation.sh";
+    
         // Setup session options
         static SessionOptions sessionOptions = new SessionOptions
         {
@@ -45,17 +51,20 @@ namespace RetropieSyncTool
             //
             //RunSSHCommand(new SshClient("192.168.1.149", "pi", "raspberry"), "sudo reboot");
 
-
+            ExecuteSSHCommands("192.168.1.148", new string[] { reboot });
             //RunRandomRom("192.168.1.117");
-            RunRom("192.168.1.117", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
+            //RunRom("192.168.1.117", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
 
             RunRandomRom("192.168.1.148");
-            RunRandomRom("192.168.1.149");
+            //RunRandomRom("192.168.1.149");
 
           
             //RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { killEmuStation,  command });
             if (fetchArtwork) FetchArtwork();
             if (fetchConfig) FetchConfig();
+
+            Console.WriteLine("Press any key to exit.");
+            Console.ReadLine();
         }
 
         protected static string GetRunRomCommand(string rfi) //string romPath, string system = "mame2000"
@@ -64,9 +73,22 @@ namespace RetropieSyncTool
             var parent = uri.Segments[uri.Segments.Length - 2].Replace("/", "");//.GetParentUriString(uri);
 
             if (parent == "fba") parent = "fbneo";
-            if (parent == "arcade") parent = "mame2000";
+            //if (parent == "arcade") parent = "mame2000";
+            if (parent == "mame2003") parent = "mame-libretro";
 
-            var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg";
+            //var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg";
+            var command = $@"sudo {RUNCOMMAND} 0 _SYS_ {parent} {rfi}";  //export DISPLAY=:0
+
+            Console.WriteLine($"run command:\r\n{command}");
+            return command;
+        }
+
+        protected static string GetRunMameCommand(string romName, string emulator = "mame4all")  //1943
+        {
+            ///opt/retropie/emulators/mame4all/mame "1943"
+            ///   var command = $@"sudo {RUNCOMMAND} 0 _SYS_ {parent} {rfi}";  //export DISPLAY=:0
+
+            var command = $@"sudo /opt/retropie/emulators/{emulator}/mame '{romName}'";
             Console.WriteLine($"run command:\r\n{command}");
             return command;
         }
@@ -125,20 +147,29 @@ namespace RetropieSyncTool
 
                 foreach(RemoteFileInfo di in directories)
                 {
-                    Console.WriteLine($"{di.FullName}");
-
-                    var fileInfos = session.EnumerateRemoteFiles(di.FullName, "*.zip", EnumerationOptions.None).ToList();//.Select(fi => fi.FullName).ToList();
-
-                    if (fileInfos.Count > 0)
+                    try
                     {
-                        Console.WriteLine($"Writing {fileInfos.Count} files from path: {di.FullName}");
-                        romsByPath.AddRange(fileInfos);
+
+                        Console.WriteLine($"{di.FullName}");
+
+                        var fileInfos = session.EnumerateRemoteFiles(di.FullName, "*.zip", EnumerationOptions.None).ToList();//.Select(fi => fi.FullName).ToList();
+
+                        if (fileInfos.Count > 0)
+                        {
+                            Console.WriteLine($"Writing {fileInfos.Count} files from path: {di.FullName}");
+                            romsByPath.AddRange(fileInfos);
+                        }
+                        else
+                        {
+                            //Console.WriteLine($"Nothing found at {di.FullName}");
+                        }
+
                     }
-                    else
+                    catch (Exception exc)
                     {
-                        //Console.WriteLine($"Nothing found at {di.FullName}");
+                        Console.WriteLine(exc.Message);
                     }
-                    
+
                     //romsByPath.Add(di.FullName);
                 }
                 
@@ -151,9 +182,9 @@ namespace RetropieSyncTool
                 //    Console.WriteLine("Adding {0} to listing", fileInfo.Name);
                 //}
             }
-            string command = GetRunRomCommand(randomRom.FullName);
-
-            ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, command });
+            // string command = GetRunRomCommand(randomRom.FullName);
+            string command = GetRunMameCommand("1943");// randomRom.Name.Replace(".zip", "1943.zip"));
+            ExecuteSSHCommands(ipClient, new string[] { killMame, command }); //killEmuStation, killMame,
             //RunSSHCommands(new SshClient(ipClient, "pi", "raspberry"), new string[] { killEmuStation, killMame, command });
         }
 
@@ -226,9 +257,11 @@ namespace RetropieSyncTool
                     {
                         var result = session.ExecuteCommand(cmd);
 
+                        result.Check();
+
                         if (result.IsSuccess)
                         {
-                            Console.WriteLine(result.Output);
+                            Console.WriteLine($"Success: {result.Output}");
                             if (result.Output.Contains("not supported"))
                             {
                                 Console.WriteLine(result.Output);

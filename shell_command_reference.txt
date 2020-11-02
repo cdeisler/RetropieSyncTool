@@ -1,0 +1,13 @@
+/opt/retropie/emulators/mame4all/mame "1943"
+
+
+romName
+
+/opt/retropie/supplementary/runcommand/joy2key.py /dev/input/js0 1b5b44 1b5b43 1b5b41 1b5b42 00 00 00 00 00 00 00 0a & 
+
+"$home/.emulationstation/gamelists/retropie/gamelist.xml"
+
+export TERMINFO=/usr/lib/terminfo
+echo $SHELL
+echo $TERM
+setenv TERMINFO /usr/lib/terminfo
