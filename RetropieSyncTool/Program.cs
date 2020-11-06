@@ -23,6 +23,40 @@ namespace RetropieSyncTool
         protected static string killMame = "sudo ps -ef | awk '/mame/ {print $2}' | xargs sudo kill -9 2092";
         protected static string shutDown = "sudo shutdown -h now";
         protected static string reboot = "sudo reboot";
+        protected static string emulationstation = "sudo emulationstation";
+
+        protected static string aptgetupdate = "sudo apt-get update";
+        protected static string installpythonpip = "sudo apt install python3-pip --fix-missing";
+        // sudo pip3 install paramiko
+
+
+        protected static string test = @"import paramiko
+
+ip='192.168.1.148'
+port=22
+username='pi'
+password='raspberry'
+
+cmd='some useful command' 
+
+ssh=paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(ip,port,username,password)
+
+stdin,stdout,stderr=ssh.exec_command(cmd)
+outlines=stdout.readlines()
+resp=''.join(outlines)
+print(resp)
+
+stdin,stdout,stderr=ssh.exec_command('sudo reboot')
+outlines=stdout.readlines()
+resp=''.join(outlines)
+print(resp)";
+        //        protected static string test = @"client = SSHClient()
+        //client.connect(host, port, username)
+        //session = client.get_transport().open_session()
+        //AgentRequestHandler(session)
+        //session.exec_command('{0}')";
 
         //"{} 0 _SYS_ {} '{}'".format( RUNCOMMAND, system, path )
         protected static string RUNCOMMAND = "/opt/retropie/supplementary/runcommand/runcommand.sh";
@@ -49,13 +83,15 @@ namespace RetropieSyncTool
             //var command = "'/opt/retropie/supplementary/runcommand/runcommand.sh' 0 SYS arcade '/home/pi/RetroPie/roms/arcade/1941.zip'";//mame-mame4all
             //var command = "subprocess.Popen('/opt/retropie/supplementary/runcommand/runcommand.sh', '0', '_SYS_', 'arcade' '/home/pi/RetroPie/roms/arcade/1941.zip')";
             //
-            //RunSSHCommand(new SshClient("192.168.1.149", "pi", "raspberry"), "sudo reboot");
+            RunSSHCommand(new SshClient("192.168.1.148", "pi", "raspberry"), test);
 
-            ExecuteSSHCommands("192.168.1.148", new string[] { reboot });
+            //ExecuteSSHCommands("192.168.1.148", new string[] { emulationstation });
             //RunRandomRom("192.168.1.117");
             //RunRom("192.168.1.117", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
 
-            RunRandomRom("192.168.1.148");
+            //ExecuteSSHCommands("192.168.1.148", new string[] { killEmuStation });
+
+            //RunRandomRom("192.168.1.148");
             //RunRandomRom("192.168.1.149");
 
           
@@ -76,8 +112,15 @@ namespace RetropieSyncTool
             //if (parent == "arcade") parent = "mame2000";
             if (parent == "mame2003") parent = "mame-libretro";
 
-            //var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg";
-            var command = $@"sudo {RUNCOMMAND} 0 _SYS_ {parent} {rfi}";  //export DISPLAY=:0
+            //sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2000/mame2000_libretro.so --config /opt/retropie/configs/mame-mame4all/retroarch.cfg /home/pi/RetroPie/roms/arcade/hbarrel.zip
+            var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg &";
+            //var command = $@"sudo {RUNCOMMAND} 0 _SYS_ {parent} {rfi}";  //export DISPLAY=:0
+
+            test = @"client = SSHClient()
+client.connect({}, {}, {})
+session = client.get_transport().open_session()
+AgentRequestHandler(session)
+session.exec_command('{0}')";
 
             Console.WriteLine($"run command:\r\n{command}");
             return command;
@@ -88,7 +131,7 @@ namespace RetropieSyncTool
             ///opt/retropie/emulators/mame4all/mame "1943"
             ///   var command = $@"sudo {RUNCOMMAND} 0 _SYS_ {parent} {rfi}";  //export DISPLAY=:0
 
-            var command = $@"sudo /opt/retropie/emulators/{emulator}/mame '{romName}'";
+            var command = $@"nohup /opt/retropie/emulators/{emulator}/mame '{romName}'";  //
             Console.WriteLine($"run command:\r\n{command}");
             return command;
         }
@@ -182,9 +225,10 @@ namespace RetropieSyncTool
                 //    Console.WriteLine("Adding {0} to listing", fileInfo.Name);
                 //}
             }
-            // string command = GetRunRomCommand(randomRom.FullName);
-            string command = GetRunMameCommand("1943");// randomRom.Name.Replace(".zip", "1943.zip"));
-            ExecuteSSHCommands(ipClient, new string[] { killMame, command }); //killEmuStation, killMame,
+            //string command = GetRunRomCommand(randomRom.FullName);
+            //ddragon3.zip
+            string command = GetRunMameCommand("ddragon3");// randomRom.Name.Replace(".zip", "1943.zip"));
+            ExecuteSSHCommands(ipClient, new string[] { killMame, command }); //killEmuStation, killMame,  
             //RunSSHCommands(new SshClient(ipClient, "pi", "raspberry"), new string[] { killEmuStation, killMame, command });
         }
 
