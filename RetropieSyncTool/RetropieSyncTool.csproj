@@ -59,6 +59,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="DatFiles\mame2003-lr-no-clones-no-neogeo.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="DatFiles\mame2003.xml" />
     <Content Include="DatFiles\mame2003_noclone.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

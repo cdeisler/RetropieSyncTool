@@ -87,7 +87,7 @@ print(resp)";
 
             //RunSSHCommand(new SshClient("192.168.1.148", "pi", "raspberry"), command);//, //);
 
-            //ExecuteSSHCommands("192.168.1.149", new string[] { reboot });
+            ExecuteSSHCommands("192.168.1.149", new string[] { reboot });
             //RunRandomRom("192.168.1.117");
 
             //RunRom("192.168.1.149", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
@@ -96,13 +96,16 @@ print(resp)";
 
             //C:\Users\CJ\Downloads\MAME2003_Reference_Set_MAME0.78_ROMs_CHDs_Samples\roms
 
-                //foreach (var path in Directory.EnumerateFiles(@"C:\Users\CJ\Downloads\MAME2003_Reference_Set_MAME0.78_ROMs_CHDs_Samples\roms\").Where(s => s.EndsWith(".zip")))
-                //{
-                //    //Uri uri = new Uri(path);
-                //    //uri.LocalPath
-                //    var fileName = Path.GetFileName(path);
-                //    WriteRom("192.168.1.149", path, $"/home/pi/RetroPie/roms/arcade/mame2003/"); //.zip
-                //}
+            //foreach (var path in Directory.EnumerateFiles(@"C:\Users\CJ\Downloads\MAME2003_Reference_Set_MAME0.78_ROMs_CHDs_Samples\roms\").Where(s => s.EndsWith(".zip")))
+            //{
+            //    //Uri uri = new Uri(path);
+            //    //uri.LocalPath
+            //    var fileName = Path.GetFileName(path);
+            //    WriteRom("192.168.1.149", path, $"/home/pi/RetroPie/roms/arcade/mame2003/"); //.zip
+            //}
+
+            ProcessDATFile();
+
 
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"mame2003_noclone.xml");
 
@@ -131,6 +134,7 @@ print(resp)";
                 }
             }
 
+            
 
             //RunRandomRom("192.168.1.148");
             //RunRandomRom("192.168.1.149");
@@ -217,11 +221,15 @@ print(resp)";
 
                 //using (var session = new WinSCP.Session())
                 //{
+
+                // Connect
+                if (!session.Opened)
+                {
                     session.SessionLogPath = @"c:\temp\WinScp_Session_$Date.log";
                     session.FileTransferred += FileTransferred;
                     session.Failed += Session_Failed;
-                    // Connect
                     session.Open(sessionOptions);
+                }
 
                     // Download files
                     TransferOptions transferOptions = new TransferOptions();
@@ -261,6 +269,43 @@ print(resp)";
                     //}
 
                 //}
+
+
+            }
+            catch (InvalidOperationException ioe)
+            {
+                Console.WriteLine("InvalidOperationException: {0}", ioe);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: {0}", e);
+
+            }
+        }
+
+        protected static void CreateDirectory(string ipClient, WinSCP.Session session, string folderPathRemote)  //$"/home/pi/RetroPie/roms/{folder}/*
+        {
+            try
+            {
+                //List<string> romFolders = new List<string>() { "fba" };//, "mame-libretro" };
+
+                //using (var session = new WinSCP.Session())
+                //{
+                //session.SessionLogPath = @"c:\temp\WinScp_Session_$Date.log";
+                //session.FileTransferred += FileTransferred;
+                //session.Failed += Session_Failed;
+                //// Connect
+                //session.Open(sessionOptions);
+
+                // Download files
+                TransferOptions transferOptions = new TransferOptions();
+                transferOptions.TransferMode = TransferMode.Binary;
+                transferOptions.AddRawSettings("FtpListAll", "0");
+
+                string remotePath = folderPathRemote;//$"/home/pi/RetroPie/roms/{folder}/*";
+
+                if (!session.FileExists(remotePath)) session.CreateDirectory(remotePath);
+                else Console.WriteLine($"File {remotePath} already exists.");
 
 
             }
@@ -699,67 +744,128 @@ print(resp)";
 
         public static string ProcessDATFile()
         {
-            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"mame2003-lr-no-clones-no-neogeo.xml");
-
-            // var txlife = getOrderXmlTxLife(orderid);
-
-            XmlDocument testorder = new XmlDocument();
-
-            if (!string.IsNullOrEmpty(path))
+            try
             {
-                testorder.Load(path);//.LoadXml(txlife);
-            }
-            //return testorder.OuterXml.ToString();
 
-            //var nsmgr = new XmlNamespaceManager(testorder.NameTable);
-            //nsmgr.AddNamespace("ns", "http://ACORD.org/Standards/Life/2");
-            //nsmgr.AddNamespace("ims", "http://imsparamed.com/schemas/acorn/ims");
+                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"mame2003-lr-no-clones-no-neogeo.xml");
 
-            //var node = testorder.FirstChild;
+                // var txlife = getOrderXmlTxLife(orderid);
 
-            var allGameNodes = testorder.SelectNodes("//mame/game");
-            var gameNodes = testorder.SelectNodes("//mame/game[not(@cloneof)]");//, nsmgr);
+                XmlDocument testorder = new XmlDocument();
 
-            var mameNode = testorder.SelectSingleNode("//mame");
-            int act = allGameNodes.Count;
-            int ct = gameNodes.Count;
-
-            mameNode.RemoveAll();
-
-            List<string> categories = new List<string>();
-
-            //var test = allGameNodes.GetEnumerator().ToList();
-
-            for (int i = 0; i < act; i++)
-            //            foreach(XmlNode node in gameNodes)
-            {
-                var node = allGameNodes.Item(i);
-                var catNode = node.SelectSingleNode("/category");
-                if (catNode != null)
+                if (!string.IsNullOrEmpty(path))
                 {
-                    categories.Add(catNode.Value);
+                    testorder.Load(path);//.LoadXml(txlife);
+                }
+                //return testorder.OuterXml.ToString();
+
+                //var nsmgr = new XmlNamespaceManager(testorder.NameTable);
+                //nsmgr.AddNamespace("ns", "http://ACORD.org/Standards/Life/2");
+                //nsmgr.AddNamespace("ims", "http://imsparamed.com/schemas/acorn/ims");
+
+                //var node = testorder.FirstChild;
+
+                var xmlRootNodeNode = "datafile";// mame
+
+                var allGameNodes = testorder.SelectNodes($"//{xmlRootNodeNode}/game");
+                var gameNodes = testorder.SelectNodes($"//{xmlRootNodeNode}/game[not(@cloneof)]");//, nsmgr);
+
+                var mameNode = testorder.SelectSingleNode($"//{xmlRootNodeNode}");
+                int act = allGameNodes.Count;
+                int ct = gameNodes.Count;
+
+                mameNode.RemoveAll();
+
+                List<string> categories = new List<string>();
+
+                //var test = allGameNodes.GetEnumerator().ToList();
+
+                for (int i = 0; i < act; i++)
+                //            foreach(XmlNode node in gameNodes)
+                {
+                    var node = allGameNodes.Item(i);
+                    var catNode = node.SelectSingleNode("/category");
+                    if (catNode != null)
+                    {
+                        categories.Add(catNode.InnerText);
+                    }
+
+                    mameNode.AppendChild(node);
                 }
 
-                mameNode.AppendChild(node);
+                List<string> exclusionList = new List<string>()
+                {
+                    "Casino",
+                    "Quiz",
+                    "Tabletop",
+                    "Pinball"
+                };
+
+                var includedCategories = categories.Distinct().Where(c => !exclusionList.Any(exc => c.Contains(exc))).OrderBy(c => c);
+                var distinctCategories = string.Join("\r\n", includedCategories);
+                Console.WriteLine($"Total categories: {distinctCategories}");
+
+                var distinctFolderList = includedCategories.Select(c => c.IndexOf(" ", 0, c.Length - 1) > 0 ? c.Split(' ').First() : c).Distinct().OrderBy(c => c);
+                Console.WriteLine($"Folder List: {string.Join("\r\n", distinctFolderList)}");
+
+                using (var session = new WinSCP.Session())
+                {
+                    session.SessionLogPath = @"c:\temp\WinScp_Session_$Date.log";
+                    session.FileTransferred += FileTransferred;
+                    session.Failed += Session_Failed;
+                    // Connect
+                    session.Open(sessionOptions);
+
+                    foreach (var folderName in distinctFolderList)
+                    {
+                        CreateDirectory("", session, $"/home/pi/RetroPie/roms/arcade/mame2003/working/{folderName}");
+                    }
+                    //WriteRom("192.168.1.149", session, localPath, $"/home/pi/RetroPie/roms/arcade/mame2003/"); //.zip
+                }
+
+
+
+                var xml = testorder.OuterXml.ToString();
+
+                var finalDoc = new XmlDocument();
+
+                XDocument doc = XDocument.Parse(xml);
+
+
+                finalDoc.LoadXml(doc.ToString());
+                var allGameNodesTest = finalDoc.SelectNodes($"//{xmlRootNodeNode}/game");
+                int ctt = allGameNodesTest.Count;
+
+                foreach(var folder in distinctFolderList)
+                {
+                    var folderNodes = testorder.SelectNodes($"//{xmlRootNodeNode}/game/category[starts-with(text(),'{folder}')]");
+
+                    using (var session = new WinSCP.Session())
+                    {
+                        for (var i = 0; i < folderNodes.Count; i++)// gameNode in folderNodes)
+                        {
+                            var gameName = folderNodes.Item(i).ParentNode.Attributes["name"]?.Value;
+                            var localPath = $@"C:\Users\CJ\Downloads\MAME2003_Reference_Set_MAME0.78_ROMs_CHDs_Samples\roms\{gameName}.zip";
+                            var fileName = Path.GetFileName(localPath);
+
+                            WriteRom("192.168.1.149", session, localPath, $"/home/pi/RetroPie/roms/arcade/mame2003/working/{folder}/{fileName}"); //.zip
+
+                        }
+                    }
+                }
+
+                MemoryStream mStream = new MemoryStream();
+                XmlTextWriter writer = new XmlTextWriter(mStream, Encoding.Unicode);
+
+                //finalDoc.Save(@"c:\temp\mame2003_noclone.xml");
+                return xml;
+
             }
+            catch (Exception exc) {
+                Console.WriteLine($"Exception: {exc}");
+            }
+            return "";
 
-
-            var xml = testorder.OuterXml.ToString();
-
-            var finalDoc = new XmlDocument();
-
-            XDocument doc = XDocument.Parse(xml);
-           
-
-            finalDoc.LoadXml(doc.ToString());
-            var allGameNodesTest = finalDoc.SelectNodes("//mame/game");
-            int ctt = allGameNodesTest.Count;
-
-            MemoryStream mStream = new MemoryStream();
-            XmlTextWriter writer = new XmlTextWriter(mStream, Encoding.Unicode);
-
-            //finalDoc.Save(@"c:\temp\mame2003_noclone.xml");
-            return xml;
         }
 
     }
