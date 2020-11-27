@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
 using WinSCP;
 
 namespace RetropieSyncTool
@@ -86,7 +87,7 @@ print(resp)";
 
             //RunSSHCommand(new SshClient("192.168.1.148", "pi", "raspberry"), command);//, //);
 
-            //ExecuteSSHCommands("192.168.1.148", new string[] { emulationstation });
+            //ExecuteSSHCommands("192.168.1.149", new string[] { reboot });
             //RunRandomRom("192.168.1.117");
 
             //RunRom("192.168.1.149", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
@@ -688,6 +689,77 @@ print(resp)";
                 Debug.WriteLine(
                     "Timestamp of {0} kept with its default (current time)", e.Destination);
             }
+        }
+
+
+        /**********************************************************************/
+        /*********************** DAT File Processing **************************/
+        /**********************************************************************/
+
+
+        public static string ProcessDATFile()
+        {
+            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"mame2003-lr-no-clones-no-neogeo.xml");
+
+            // var txlife = getOrderXmlTxLife(orderid);
+
+            XmlDocument testorder = new XmlDocument();
+
+            if (!string.IsNullOrEmpty(path))
+            {
+                testorder.Load(path);//.LoadXml(txlife);
+            }
+            //return testorder.OuterXml.ToString();
+
+            //var nsmgr = new XmlNamespaceManager(testorder.NameTable);
+            //nsmgr.AddNamespace("ns", "http://ACORD.org/Standards/Life/2");
+            //nsmgr.AddNamespace("ims", "http://imsparamed.com/schemas/acorn/ims");
+
+            //var node = testorder.FirstChild;
+
+            var allGameNodes = testorder.SelectNodes("//mame/game");
+            var gameNodes = testorder.SelectNodes("//mame/game[not(@cloneof)]");//, nsmgr);
+
+            var mameNode = testorder.SelectSingleNode("//mame");
+            int act = allGameNodes.Count;
+            int ct = gameNodes.Count;
+
+            mameNode.RemoveAll();
+
+            List<string> categories = new List<string>();
+
+            //var test = allGameNodes.GetEnumerator().ToList();
+
+            for (int i = 0; i < act; i++)
+            //            foreach(XmlNode node in gameNodes)
+            {
+                var node = allGameNodes.Item(i);
+                var catNode = node.SelectSingleNode("/category");
+                if (catNode != null)
+                {
+                    categories.Add(catNode.Value);
+                }
+
+                mameNode.AppendChild(node);
+            }
+
+
+            var xml = testorder.OuterXml.ToString();
+
+            var finalDoc = new XmlDocument();
+
+            XDocument doc = XDocument.Parse(xml);
+           
+
+            finalDoc.LoadXml(doc.ToString());
+            var allGameNodesTest = finalDoc.SelectNodes("//mame/game");
+            int ctt = allGameNodesTest.Count;
+
+            MemoryStream mStream = new MemoryStream();
+            XmlTextWriter writer = new XmlTextWriter(mStream, Encoding.Unicode);
+
+            //finalDoc.Save(@"c:\temp\mame2003_noclone.xml");
+            return xml;
         }
 
     }
