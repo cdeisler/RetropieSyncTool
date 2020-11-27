@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using WinSCP;
 
 namespace RetropieSyncTool
@@ -17,7 +18,7 @@ namespace RetropieSyncTool
         protected static bool isPushToHost = true;// false; //pull
         protected static bool isFetchArtwork = true;
         protected static string sourceHost = "192.168.1.149";
-        protected static string destinationHost = "192.168.1.117";//"192.168.1.117";//"192.168.1.117";
+        protected static string destinationHost = "192.168.1.149";//"192.168.1.117";//"192.168.1.117";
 
         protected static string killEmuStation = "sudo ps -ef | awk '/emulation/ {print $2}' | xargs sudo kill -9 2092";
         protected static string killMame = "sudo ps -ef | awk '/mame/ {print $2}' | xargs sudo kill -9 2092";
@@ -79,22 +80,61 @@ print(resp)";
 
             //kill $(pidof emulationstation)
 
-            //var command = @"/opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2000/mame2000_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg /home/pi/RetroPie/roms/arcade/robotron.zip --appendconfig /opt/retropie/configs/all/retroarch.cfg";
+            var command = @"/opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2000/mame2000_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg /home/pi/RetroPie/roms/arcade/robotron.zip --appendconfig /opt/retropie/configs/all/retroarch.cfg";
             //var command = "'/opt/retropie/supplementary/runcommand/runcommand.sh' 0 SYS arcade '/home/pi/RetroPie/roms/arcade/1941.zip'";//mame-mame4all
             //var command = "subprocess.Popen('/opt/retropie/supplementary/runcommand/runcommand.sh', '0', '_SYS_', 'arcade' '/home/pi/RetroPie/roms/arcade/1941.zip')";
-            //
-            RunSSHCommand(new SshClient("192.168.1.148", "pi", "raspberry"), test);
+
+            //RunSSHCommand(new SshClient("192.168.1.148", "pi", "raspberry"), command);//, //);
 
             //ExecuteSSHCommands("192.168.1.148", new string[] { emulationstation });
             //RunRandomRom("192.168.1.117");
-            //RunRom("192.168.1.117", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
 
-            //ExecuteSSHCommands("192.168.1.148", new string[] { killEmuStation });
+            //RunRom("192.168.1.149", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
+
+            //ExecuteSSHCommands("192.168.1.148", new string[] {  command });
+
+            //C:\Users\CJ\Downloads\MAME2003_Reference_Set_MAME0.78_ROMs_CHDs_Samples\roms
+
+                //foreach (var path in Directory.EnumerateFiles(@"C:\Users\CJ\Downloads\MAME2003_Reference_Set_MAME0.78_ROMs_CHDs_Samples\roms\").Where(s => s.EndsWith(".zip")))
+                //{
+                //    //Uri uri = new Uri(path);
+                //    //uri.LocalPath
+                //    var fileName = Path.GetFileName(path);
+                //    WriteRom("192.168.1.149", path, $"/home/pi/RetroPie/roms/arcade/mame2003/"); //.zip
+                //}
+
+            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"mame2003_noclone.xml");
+
+            // var txlife = getOrderXmlTxLife(orderid);
+
+            XmlDocument testorder = new XmlDocument();
+
+            if (!string.IsNullOrEmpty(path))
+            {
+                testorder.Load(path);//.LoadXml(txlife);
+            }
+
+            var allGameNodes = testorder.SelectNodes("//mame/game");
+            int ct = allGameNodes.Count;
+
+            Console.WriteLine($"{ct} games found.");
+
+            for(int i=0; i<ct; i++)
+            {
+                var gameName = allGameNodes.Item(i).Attributes["name"].Value;
+                var localPath = $@"C:\Users\CJ\Downloads\MAME2003_Reference_Set_MAME0.78_ROMs_CHDs_Samples\roms\{gameName}.zip";
+                var fileName = Path.GetFileName(path);
+                using (var session = new WinSCP.Session())
+                {
+                    WriteRom("192.168.1.149", session, localPath, $"/home/pi/RetroPie/roms/arcade/mame2003/"); //.zip
+                }
+            }
+
 
             //RunRandomRom("192.168.1.148");
             //RunRandomRom("192.168.1.149");
 
-          
+
             //RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { killEmuStation,  command });
             if (fetchArtwork) FetchArtwork();
             if (fetchConfig) FetchConfig();
@@ -116,11 +156,11 @@ print(resp)";
             var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg &";
             //var command = $@"sudo {RUNCOMMAND} 0 _SYS_ {parent} {rfi}";  //export DISPLAY=:0
 
-            test = @"client = SSHClient()
-client.connect({}, {}, {})
-session = client.get_transport().open_session()
-AgentRequestHandler(session)
-session.exec_command('{0}')";
+//            test = @"client = SSHClient()
+//client.connect({}, {}, {})
+//session = client.get_transport().open_session()
+//AgentRequestHandler(session)
+//session.exec_command('{0}')";
 
             Console.WriteLine($"run command:\r\n{command}");
             return command;
@@ -168,6 +208,72 @@ session.exec_command('{0}')";
 
         }
         
+        protected static void WriteRom(string ipClient, WinSCP.Session session, string romPathLocal, string romPathDestination)  //$"/home/pi/RetroPie/roms/{folder}/*
+        {
+            try
+            {
+                //List<string> romFolders = new List<string>() { "fba" };//, "mame-libretro" };
+
+                //using (var session = new WinSCP.Session())
+                //{
+                    session.SessionLogPath = @"c:\temp\WinScp_Session_$Date.log";
+                    session.FileTransferred += FileTransferred;
+                    session.Failed += Session_Failed;
+                    // Connect
+                    session.Open(sessionOptions);
+
+                    // Download files
+                    TransferOptions transferOptions = new TransferOptions();
+                    transferOptions.TransferMode = TransferMode.Binary;
+                    transferOptions.AddRawSettings("FtpListAll", "0");
+
+                    //foreach (string folder in romFolders)
+                    //{
+                        TransferOperationResult transferResult = null;
+
+                        //if (isPushToHost) //Push
+                        //{
+                        string remotePath = romPathDestination;//$"/home/pi/RetroPie/roms/{folder}/*";
+                        //string localPath = $@"D:\RetroPie\RetroPieSync\{destinationHost}\roms\{folder}\*";
+                        string localPath = romPathLocal;
+                        //if (isFetchArtwork)
+                        //{
+                        //    remotePath = $"/home/pi/.emulationstation/downloaded_images/*";
+                        //    localPath = $@"D:\RetroPie\RetroPieSync\{sourceHost}\downloaded_images\";
+                        //}x
+
+                        //var transferResult2 = session.PutFileToDirectory(localPath, remotePath, false, transferOptions);
+                    var transferResult2 = session.PutFiles(localPath, remotePath, false, transferOptions);
+                    //.PutFiles(localPath, remotePath, false, transferOptions);
+
+                    //}
+
+
+                    // Throw on any error
+                    transferResult2.Check();
+
+                    // Print results
+                    foreach (TransferEventArgs transfer in transferResult2.Transfers)
+                    {
+                        Console.WriteLine("WriteRom of {0} succeeded", transfer.FileName);
+                    }
+                    //}
+
+                //}
+
+
+            }
+            catch (InvalidOperationException ioe)
+            {
+                Console.WriteLine("InvalidOperationException: {0}", ioe);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: {0}", e);
+
+            }
+        }
+
         protected static void RunRandomRom(string ipClient)
         {
             RemoteFileInfo randomRom;
@@ -225,10 +331,11 @@ session.exec_command('{0}')";
                 //    Console.WriteLine("Adding {0} to listing", fileInfo.Name);
                 //}
             }
-            //string command = GetRunRomCommand(randomRom.FullName);
+
+            string command = GetRunRomCommand(randomRom.FullName);
             //ddragon3.zip
-            string command = GetRunMameCommand("ddragon3");// randomRom.Name.Replace(".zip", "1943.zip"));
-            ExecuteSSHCommands(ipClient, new string[] { killMame, command }); //killEmuStation, killMame,  
+            //string command = GetRunMameCommand("ddragon3");// randomRom.Name.Replace(".zip", "1943.zip"));
+            ExecuteSSHCommands(ipClient, new string[] {  killEmuStation, killMame, command }); //killEmuStation, killMame,  
             //RunSSHCommands(new SshClient(ipClient, "pi", "raspberry"), new string[] { killEmuStation, killMame, command });
         }
 
@@ -530,7 +637,7 @@ session.exec_command('{0}')";
 
         private static void Session_Failed(object sender, FailedEventArgs e)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($@"Error Session_Failed: {e.Error.Message}");
         }
 
         private static void FileTransferred(object sender, TransferEventArgs e)
