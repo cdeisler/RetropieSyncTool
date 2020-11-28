@@ -105,38 +105,38 @@ print(resp)";
             //}
 
             string remoteIPClient = "192.168.1.117";
-            ExecuteSSHCommands(remoteIPClient, new string[] { reboot });
-            ProcessDATFile();
-
+            // ExecuteSSHCommands(remoteIPClient, new string[] { reboot });
+            //ProcessDATFile();
+            NewDatFromNeoGeoGames();
 
                 //string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"mame2003_noclone.xml");
 
-                //// var txlife = getOrderXmlTxLife(orderid);
+            //// var txlife = getOrderXmlTxLife(orderid);
 
-                //XmlDocument testorder = new XmlDocument();
+            //XmlDocument testorder = new XmlDocument();
 
-                //if (!string.IsNullOrEmpty(path))
-                //{
-                //    testorder.Load(path);//.LoadXml(txlife);
-                //}
+            //if (!string.IsNullOrEmpty(path))
+            //{
+            //    testorder.Load(path);//.LoadXml(txlife);
+            //}
 
-                //var allGameNodes = testorder.SelectNodes("//mame/game");
-                //int ct = allGameNodes.Count;
+            //var allGameNodes = testorder.SelectNodes("//mame/game");
+            //int ct = allGameNodes.Count;
 
-                //Console.WriteLine($"{ct} games found.");
+            //Console.WriteLine($"{ct} games found.");
 
-                //for(int i=0; i<ct; i++)
-                //{
-                //    var gameName = allGameNodes.Item(i).Attributes["name"].Value;
-                //    var localPath = $@"C:\Users\CJ\Downloads\MAME2003_Reference_Set_MAME0.78_ROMs_CHDs_Samples\roms\{gameName}.zip";
-                //    var fileName = Path.GetFileName(path);
-                //    using (var session = new WinSCP.Session())
-                //    {
-                //        WriteRom("192.168.1.149", session, localPath, $"/home/pi/RetroPie/roms/arcade/mame2003/"); //.zip
-                //    }
-                //}
+            //for(int i=0; i<ct; i++)
+            //{
+            //    var gameName = allGameNodes.Item(i).Attributes["name"].Value;
+            //    var localPath = $@"C:\Users\CJ\Downloads\MAME2003_Reference_Set_MAME0.78_ROMs_CHDs_Samples\roms\{gameName}.zip";
+            //    var fileName = Path.GetFileName(path);
+            //    using (var session = new WinSCP.Session())
+            //    {
+            //        WriteRom("192.168.1.149", session, localPath, $"/home/pi/RetroPie/roms/arcade/mame2003/"); //.zip
+            //    }
+            //}
 
-            
+
 
             //RunRandomRom("192.168.1.148");
             //RunRandomRom("192.168.1.149");
@@ -751,36 +751,71 @@ print(resp)";
         /*********************** DAT File Processing **************************/
         /**********************************************************************/
 
+        public static XmlDocument LoadDatFile(string datFile)
+        {
+            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"{datFile}");
+
+            XmlDocument xmlDoc = new XmlDocument();
+
+            if (string.IsNullOrEmpty(path))
+            {
+                Console.WriteLine("Path missing");
+                return null;
+            }
+            xmlDoc.Load(path);
+            return xmlDoc;
+        }
+
+        public static string NewDatFromNeoGeoGames()
+        {
+            // sourcefile="neogeo.c" && !cloneof
+            var datFile = "mame2003.xml";
+            var xmlDoc = LoadDatFile(datFile);
+            var xmlRootNodeNode = xmlDoc.ChildNodes[1].Name;
+
+            var gameNeoGeoNodes = xmlDoc.SelectNodes($"//{xmlRootNodeNode}/game[not(@cloneof) and @sourcefile = 'neogeo.c']");//, nsmgr);
+            var mameNode = xmlDoc.SelectSingleNode($"//{xmlRootNodeNode}");
+
+            int ct = gameNeoGeoNodes.Count;
+
+            Console.WriteLine($"Found {ct} NeoGeo Games");
+
+            mameNode.RemoveAll();
+
+            for (int i=0; i<ct; i++)
+            {
+                var node = gameNeoGeoNodes.Item(i);
+                mameNode.AppendChild(node);
+            }
+
+            int finalCt = xmlDoc.SelectNodes($"//{xmlRootNodeNode}/game").Count;
+
+            Console.WriteLine($"Final XML has {ct} NeoGeo Games");
+
+            var xml = xmlDoc.OuterXml.ToString();
+            xmlDoc.Save($@"c:\temp\{datFile}.neoonly");
+            //var finalDoc = new XmlDocument();
+            //XDocument doc = XDocument.Parse(xml);
+
+            //finalDoc.LoadXml(doc.ToString());
+
+            return "";
+        }
 
         public static string ProcessDATFile(string remoteIPClient = "192.168.1.117")
         {
             try
             {
                 //string remoteIPClient = "192.168.1.117";
-                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"mame2003-lr-no-clones-no-neogeo.xml");
-
-                // var txlife = getOrderXmlTxLife(orderid);
-
-                XmlDocument testorder = new XmlDocument();
-
-                if (!string.IsNullOrEmpty(path))
-                {
-                    testorder.Load(path);//.LoadXml(txlife);
-                }
-                //return testorder.OuterXml.ToString();
-
-                //var nsmgr = new XmlNamespaceManager(testorder.NameTable);
-                //nsmgr.AddNamespace("ns", "http://ACORD.org/Standards/Life/2");
-                //nsmgr.AddNamespace("ims", "http://imsparamed.com/schemas/acorn/ims");
-
-                //var node = testorder.FirstChild;
+              
+                XmlDocument xmlDoc = LoadDatFile("mame2003-lr-no-clones-no-neogeo.xml");
 
                 var xmlRootNodeNode = "datafile";// mame
 
-                var allGameNodes = testorder.SelectNodes($"//{xmlRootNodeNode}/game");
-                var gameNodes = testorder.SelectNodes($"//{xmlRootNodeNode}/game[not(@cloneof)]");//, nsmgr);
+                var allGameNodes = xmlDoc.SelectNodes($"//{xmlRootNodeNode}/game");
+                var gameNodes = xmlDoc.SelectNodes($"//{xmlRootNodeNode}/game[not(@cloneof)]");//, nsmgr);
 
-                var mameNode = testorder.SelectSingleNode($"//{xmlRootNodeNode}");
+                var mameNode = xmlDoc.SelectSingleNode($"//{xmlRootNodeNode}");
                 int act = allGameNodes.Count;
                 int ct = gameNodes.Count;
 
@@ -851,7 +886,7 @@ print(resp)";
                     }
                 }
 
-                var xml = testorder.OuterXml.ToString();
+                var xml = xmlDoc.OuterXml.ToString();
                 var finalDoc = new XmlDocument();
                 XDocument doc = XDocument.Parse(xml);
 
@@ -863,7 +898,7 @@ print(resp)";
                 {
                     foreach (var folder in distinctFolderList)
                     {
-                        var folderNodes = testorder.SelectNodes($"//{xmlRootNodeNode}/game/category[starts-with(text(),'{folder}')]");
+                        var folderNodes = xmlDoc.SelectNodes($"//{xmlRootNodeNode}/game/category[starts-with(text(),'{folder}')]");
 
                         for (var i = 0; i < folderNodes.Count; i++)// gameNode in folderNodes)
                         {

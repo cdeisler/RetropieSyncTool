@@ -56,16 +56,22 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="DatFiles\MAME_0.37b5_mame2000.dat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="DatFiles\mame2003-lr-no-clones-no-neogeo.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="DatFiles\mame2003.xml" />
+    <Content Include="DatFiles\mame2003.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="DatFiles\mame2003_noclone.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="DatFiles\mame4all-no-clones-no-neogeo.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\WinSCP.5.17.7\build\WinSCP.targets" Condition="Exists('..\packages\WinSCP.5.17.7\build\WinSCP.targets')" />
