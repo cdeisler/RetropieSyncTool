@@ -18,6 +18,8 @@ namespace RetropieSyncTool
         protected static bool fetchConfig = false;
         protected static bool isPushToHost = true;// false; //pull
         protected static bool isFetchArtwork = true;
+
+        protected static string cachingServerHost = "127.0.0.1";
         protected static string sourceHost = "192.168.1.149";
         protected static string destinationHost = "192.168.1.149";//"192.168.1.117";//"192.168.1.117";
 
@@ -107,9 +109,9 @@ print(resp)";
             string remoteIPClient = "192.168.1.117";
             // ExecuteSSHCommands(remoteIPClient, new string[] { reboot });
             //ProcessDATFile();
-            NewDatFromNeoGeoGames();
+            //NewDatFromNeoGeoGames();
 
-                //string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"mame2003_noclone.xml");
+            //string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"mame2003_noclone.xml");
 
             //// var txlife = getOrderXmlTxLife(orderid);
 
@@ -140,10 +142,12 @@ print(resp)";
 
             //RunRandomRom("192.168.1.148");
             //RunRandomRom("192.168.1.149");
-
+            PutArtwork(remoteIPClient);
 
             //RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { killEmuStation,  command });
-            if (fetchArtwork) FetchArtwork();
+
+            fetchArtwork = true;
+            if (fetchArtwork) GetArtwork("192.168.1.149");
             if (fetchConfig) FetchConfig();
 
             Console.WriteLine("Press any key to exit.");
@@ -560,7 +564,7 @@ print(resp)";
             }
         }
 
-        protected static void FetchArtwork()
+        protected static void PutArtwork(string ipAddressClient)
         {
             try
             {
@@ -571,7 +575,14 @@ print(resp)";
                     session.FileTransferred += FileTransferred;
                     session.Failed += Session_Failed;
                     // Connect
-                    session.Open(sessionOptions);
+                    session.Open(new SessionOptions
+                    {
+                        GiveUpSecurityAndAcceptAnySshHostKey = true,
+                        Protocol = Protocol.Sftp,
+                        HostName = ipAddressClient,//"192.168.1.117",//"192.168.1.149",
+                        UserName = "pi",
+                        Password = "raspberry"// ,SshHostKeyFingerprint = "ssh-rsa 2048 xxxxxxxxxxx...="
+                    });
 
                     // Download files
                     TransferOptions transferOptions = new TransferOptions();
@@ -582,21 +593,10 @@ print(resp)";
                     {
                         TransferOperationResult transferResult = null;
 
-                        if (isPushToHost) //Push
-                        {
-                            string remotePath = $"/home/pi/.emulationstation/{folder}/";
-                            string localPath = $@"D:\RetroPie\RetroPieSync\{sourceHost}\{folder}\*";
+                        string remotePath = $"/home/pi/.emulationstation/{folder}/";
+                        string localPath = $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\{folder}\*";
 
-                            transferResult = session.PutFiles(localPath, remotePath, false, transferOptions);
-
-                        }
-                        else //Pull Sync
-                        {
-                            string remotePath = $"/home/pi/.emulationstation/{folder}/*";
-                            string localPath = $@"D:\RetroPie\RetroPieSync\{destinationHost}\{folder}\";
-
-                            transferResult = session.GetFiles(remotePath, localPath, false, transferOptions);
-                        }
+                        transferResult = session.PutFiles(localPath, remotePath, false, transferOptions);
 
                         // Throw on any error
                         transferResult.Check();
@@ -607,17 +607,67 @@ print(resp)";
                             Debug.WriteLine("Download of {0} succeeded", transfer.FileName);
                         }
                     }
-
                 }
-
-
             }
             catch (Exception e)
             {
-                Debug.WriteLine("Error: {0}", e);
+                Console.WriteLine("Error: {0}", e);
 
             }
         }
+
+        protected static void GetArtwork(string ipAddressClient)
+        {
+            try
+            {
+                List<string> artFolders = new List<string>() { "downloaded_images", "gamelists" };
+
+                using (var session = new WinSCP.Session())
+                {
+                    session.FileTransferred += FileTransferred;
+                    session.Failed += Session_Failed;
+                    // Connect
+                    session.Open(new SessionOptions
+                    {
+                        GiveUpSecurityAndAcceptAnySshHostKey = true,
+                        Protocol = Protocol.Sftp,
+                        HostName = ipAddressClient,//"192.168.1.117",//"192.168.1.149",
+                        UserName = "pi",
+                        Password = "raspberry"// ,SshHostKeyFingerprint = "ssh-rsa 2048 xxxxxxxxxxx...="
+                    });
+
+                    // Download files
+                    TransferOptions transferOptions = new TransferOptions();
+                    transferOptions.TransferMode = TransferMode.Binary;
+                    transferOptions.AddRawSettings("FtpListAll", "0");
+
+                    foreach (string folder in artFolders)
+                    {
+                        TransferOperationResult transferResult = null;
+
+                        string remotePath = $"/home/pi/.emulationstation/{folder}/";
+                        string localPath = $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\{folder}\*";
+
+                        transferResult = session.GetFiles(remotePath, localPath, false, transferOptions);
+
+                        // Throw on any error
+                        transferResult.Check();
+
+                        // Print results
+                        foreach (TransferEventArgs transfer in transferResult.Transfers)
+                        {
+                            Console.WriteLine("Download of {0} succeeded", transfer.FileName);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: {0}", e);
+
+            }
+        }
+
 
         protected void FetchRoms()
         {
