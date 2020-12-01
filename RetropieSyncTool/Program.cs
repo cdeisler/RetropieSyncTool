@@ -107,7 +107,7 @@ print(resp)";
             //}
 
             string remoteIPClient = "192.168.1.117";
-            // ExecuteSSHCommands(remoteIPClient, new string[] { reboot });
+            //ExecuteSSHCommands(remoteIPClient, new string[] { reboot });
             //ProcessDATFile();
             //NewDatFromNeoGeoGames();
 
@@ -142,6 +142,7 @@ print(resp)";
 
             //RunRandomRom("192.168.1.148");
             //RunRandomRom("192.168.1.149");
+            //GetArtwork("192.168.1.149");
             PutArtwork(remoteIPClient);
 
             //RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { killEmuStation,  command });
@@ -604,7 +605,7 @@ print(resp)";
                         // Print results
                         foreach (TransferEventArgs transfer in transferResult.Transfers)
                         {
-                            Debug.WriteLine("Download of {0} succeeded", transfer.FileName);
+                            Console.WriteLine("Transfer of {0} succeeded", transfer.FileName);
                         }
                     }
                 }
@@ -645,8 +646,8 @@ print(resp)";
                     {
                         TransferOperationResult transferResult = null;
 
-                        string remotePath = $"/home/pi/.emulationstation/{folder}/";
-                        string localPath = $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\{folder}\*";
+                        string remotePath = $"/home/pi/.emulationstation/{folder}/*";
+                        string localPath = $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\{folder}\";
 
                         transferResult = session.GetFiles(remotePath, localPath, false, transferOptions);
 
