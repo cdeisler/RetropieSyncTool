@@ -107,7 +107,10 @@ print(resp)";
             //}
 
             string remoteIPClient = "192.168.1.117";
-            //ExecuteSSHCommands(remoteIPClient, new string[] { reboot });
+
+            ProcessBlacklist(remoteIPClient);
+
+            RebootComputerOverSSH(remoteIPClient);// "192.168.1.149");
             //ProcessDATFile();
             //NewDatFromNeoGeoGames();
 
@@ -191,6 +194,11 @@ print(resp)";
         static string GetParentUriString(Uri uri)
         {
             return uri.AbsoluteUri.Remove(uri.AbsoluteUri.Length - uri.Segments.Last().Length);
+        }
+
+        protected static void RebootComputerOverSSH(string ipAddress)
+        {
+            ExecuteSSHCommands(ipAddress, new string[] { reboot });
         }
 
         protected static void RunRom(string ipClient, string romPath)
@@ -669,6 +677,151 @@ print(resp)";
             }
         }
 
+        protected static void GetBlacklistFile(string ipAddressClient)
+        {
+            try
+            {
+                using (var session = new WinSCP.Session())
+                {
+                    session.FileTransferred += FileTransferred;
+                    session.Failed += Session_Failed;
+                    // Connect
+                    session.Open(new SessionOptions
+                    {
+                        GiveUpSecurityAndAcceptAnySshHostKey = true,
+                        Protocol = Protocol.Sftp,
+                        HostName = ipAddressClient,//"192.168.1.117",//"192.168.1.149",
+                        UserName = "pi",
+                        Password = "raspberry"// ,SshHostKeyFingerprint = "ssh-rsa 2048 xxxxxxxxxxx...="
+                    });
+
+                    // Download files
+                    TransferOptions transferOptions = new TransferOptions();
+                    transferOptions.TransferMode = TransferMode.Binary;
+                    transferOptions.AddRawSettings("FtpListAll", "0");
+
+                    TransferOperationResult transferResult = null;
+
+                    string remotePath = $"/home/pi/blacklist.txt";
+                    string localPath = $@"D:\RetroPie\RetroPieSync\{ipAddressClient}\home\pi\blacklist.txt";
+
+                    if (!Directory.Exists($@"D:\RetroPie\RetroPieSync\{ipAddressClient}\home\pi\")) Directory.CreateDirectory($@"D:\RetroPie\RetroPieSync\{ipAddressClient}\home\pi\");
+
+                    //if (!File.Exists(localPath)) File.Create(localPath);
+
+                    transferResult = session.GetFiles(remotePath, localPath, false, transferOptions);
+
+                    // Throw on any error
+                    transferResult.Check();
+
+                    // Print results
+                    foreach (TransferEventArgs transfer in transferResult.Transfers)
+                    {
+                        Console.WriteLine("Download of {0} succeeded", transfer.FileName);
+                    }
+
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: {0}", e);
+
+            }
+        }
+
+        protected static void ProcessBlacklist(string ipAddressClient)
+        {
+            GetBlacklistFile(ipAddressClient);
+            string localPath = $@"D:\RetroPie\RetroPieSync\{ipAddressClient}\home\pi\blacklist.txt";
+
+            var blacklistedUrls = File.ReadLines(localPath).Distinct().ToList();
+
+            using (var session = new WinSCP.Session())
+            {
+                foreach (var filePath in blacklistedUrls)
+                {
+                    RemoveFile(ipAddressClient, session, filePath);
+                }
+
+                CacheBlacklistFile(ipAddressClient);
+                string remotePath = $"/home/pi/blacklist.txt";
+                RemoveFile(ipAddressClient, session, remotePath);
+            }
+
+        }
+
+        protected static void CacheBlacklistFile(string ipAddressClient)
+        {
+            string localPath = $@"D:\RetroPie\RetroPieSync\{ipAddressClient}\home\pi\blacklist.txt";
+            string localCachedPath = $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\blacklist.txt";
+
+            if (!Directory.Exists($@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\"))
+                Directory.CreateDirectory($@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\");
+
+            if (!File.Exists(localCachedPath)) File.Create(localCachedPath);
+
+            var blacklistUrls = File.ReadLines(localPath).Distinct().ToList();
+            var cachedBlacklistUrls = File.ReadLines(localCachedPath).Distinct().ToList();
+
+            foreach(var url in blacklistUrls)
+            {
+                if (!cachedBlacklistUrls.Contains(url))
+                    cachedBlacklistUrls.Add(url);
+            }
+
+            File.WriteAllLines(localCachedPath, cachedBlacklistUrls);
+
+        }
+
+
+        protected static void RemoveFile(string ipAddressClient, WinSCP.Session session, string remotePath)
+        {
+            try
+            {
+                //using (var session = new WinSCP.Session())
+                //{
+                if (!session.Opened)
+                {
+                    session.FileTransferred += FileTransferred;
+                    session.Failed += Session_Failed;
+                    // Connect
+                    session.Open(new SessionOptions
+                    {
+                        GiveUpSecurityAndAcceptAnySshHostKey = true,
+                        Protocol = Protocol.Sftp,
+                        HostName = ipAddressClient,
+                        UserName = "pi",
+                        Password = "raspberry"
+                    });
+                }
+
+                // Download files
+                TransferOptions transferOptions = new TransferOptions();
+                transferOptions.TransferMode = TransferMode.Binary;
+                transferOptions.AddRawSettings("FtpListAll", "0");
+
+                RemovalEventArgs transferResult = null;
+
+                transferResult = session.RemoveFile(remotePath);//.GetFiles(remotePath, localPath, false, transferOptions);
+
+                // Print results
+                if (transferResult.Error != null)
+                {
+                    Console.WriteLine("Error removing {0} error:{1}", transferResult.FileName, transferResult.Error);
+                }
+                else
+                {
+                    Console.WriteLine("Success removing {0}", transferResult.FileName);
+                }
+                //}
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error removing {0} error:{1}", remotePath, e.Message);
+                //Console.WriteLine("Error: {0}", e);
+
+            }
+        }
 
         protected void FetchRoms()
         {
