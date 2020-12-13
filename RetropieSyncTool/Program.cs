@@ -2,10 +2,14 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 using System.Xml;
 using System.Xml.Linq;
 using WinSCP;
@@ -83,13 +87,19 @@ print(resp)";
 
             //kill $(pidof emulationstation)
 
-            var command = @"/opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2000/mame2000_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg /home/pi/RetroPie/roms/arcade/robotron.zip --appendconfig /opt/retropie/configs/all/retroarch.cfg";
-            //var command = "'/opt/retropie/supplementary/runcommand/runcommand.sh' 0 SYS arcade '/home/pi/RetroPie/roms/arcade/1941.zip'";//mame-mame4all
+            //var command = @"/opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2000/mame2000_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg /home/pi/RetroPie/roms/arcade/robotron.zip --appendconfig /opt/retropie/configs/all/retroarch.cfg";
+            //var command = "'/opt/retropie/supplementary/runcommand/runcommand.sh' 0 SYS arcade '/home/pi/RetroPie/roms/arcade/mame2003/working/Platform/joust.zip && emulationstation'";//mame-mame4all
+
+            //"/opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2003/mame2003_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg /home/pi/RetroPie/roms/arcade/mame2003/working/Platform/joust.zip --appendconfig /opt/retropie/configs/all/retroarch.cfg && emulationstation"
+
             //var command = "subprocess.Popen('/opt/retropie/supplementary/runcommand/runcommand.sh', '0', '_SYS_', 'arcade' '/home/pi/RetroPie/roms/arcade/1941.zip')";
 
-            //RunSSHCommand(new SshClient("192.168.1.148", "pi", "raspberry"), command);//, //);
+            string remoteIPClient = "192.168.1.149";
+            var v3Clients = new string[] { "192.168.1.149", "192.168.1.117" };
 
-            //;
+
+
+            //RunRomTests();
             //RunRandomRom("192.168.1.117");
 
             //RunRom("192.168.1.149", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
@@ -105,12 +115,42 @@ print(resp)";
             //    var fileName = Path.GetFileName(path);
             //    WriteRom("192.168.1.149", path, $"/home/pi/RetroPie/roms/arcade/mame2003/"); //.zip
             //}
+            //GetArtwork("192.168.1.117");
 
-            string remoteIPClient = "192.168.1.117";
+            using (var session = new WinSCP.Session())
+            {
+                ProcessBlacklist("192.168.1.117");
+                SynchronizeClientToServerDirectories("192.168.1.117", session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
+               
+            }
 
-            ProcessBlacklist(remoteIPClient);
+            using (var session = new WinSCP.Session())
+            {
+                SynchronizeServerToClientDirectories("192.168.1.149", session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
+            }
 
-            RebootComputerOverSSH(remoteIPClient);// "192.168.1.149");
+
+            if (fetchArtwork) GetArtwork("192.168.1.117");
+
+
+         
+
+            //foreach (var ip in v3Clients) {
+            //    ProcessBlacklist(ip, v3Clients);
+            //}
+
+            //foreach (var ip in v3Clients)
+            //{
+            //    GetArtwork(ip);
+            //}
+
+
+            foreach (var ip in v3Clients)
+            {
+                RebootComputerOverSSH(ip);// "192.168.1.149");
+            }
+
+            
             //ProcessDATFile();
             //NewDatFromNeoGeoGames();
 
@@ -146,16 +186,61 @@ print(resp)";
             //RunRandomRom("192.168.1.148");
             //RunRandomRom("192.168.1.149");
             //GetArtwork("192.168.1.149");
-            PutArtwork(remoteIPClient);
+            //PutArtwork(remoteIPClient);
 
             //RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { killEmuStation,  command });
 
-            fetchArtwork = true;
-            if (fetchArtwork) GetArtwork("192.168.1.149");
+            //fetchArtwork = true;
+            //if (fetchArtwork) GetArtwork("192.168.1.117");
             if (fetchConfig) FetchConfig();
 
             Console.WriteLine("Press any key to exit.");
             Console.ReadLine();
+        }
+
+        protected static void RunRomTests()
+        {
+            string remoteIPClient = "192.168.1.149";
+            var v3Clients = new string[] { "192.168.1.149", "192.168.1.117" };
+
+
+            var romPath = "";
+            //mame-mame4all
+
+            List<string> testRomList = new List<string>();
+
+            using (var session = new WinSCP.Session())
+            {
+                //session.Timeout = TimeSpan.FromSeconds(10);
+                session.Open(new SessionOptions
+                {
+                    GiveUpSecurityAndAcceptAnySshHostKey = true,
+                    Protocol = Protocol.Sftp,
+                    HostName = remoteIPClient,
+                    UserName = "pi",
+                    Password = "raspberry"
+                });
+
+                var remoteFileList = session.EnumerateRemoteFiles("/home/pi/RetroPie/roms/arcade/mame2003/working/", "*.zip", EnumerationOptions.AllDirectories);
+
+                testRomList = remoteFileList.Select(file => file.FullName).ToList();
+
+                foreach (var rom in testRomList)
+                {
+                    //var command = $"subprocess.Popen('/opt/retropie/supplementary/runcommand/runcommand.sh', '0', '_SYS_', 'arcade' '{rom}')";
+                    var command = $"/opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2003/mame2003_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rom} --appendconfig /opt/retropie/configs/all/retroarch.cfg | tee stdout"; // | awk {{print $2}}  // | tee stdout
+                    //var command = $"'/opt/retropie/supplementary/runcommand/runcommand.sh' 0 SYS arcade '{rom}'";
+                    //ExecuteSSHCommands(remoteIPClient, new string[] { killEmuStation, killMame });
+                    //RunSSHCommand(new SshClient(remoteIPClient, "pi", "raspberry"), command);//, //);
+                    ExecuteSSHCommands(remoteIPClient, new string[] { killEmuStation, killMame, command });
+
+                    //RunSSHCommands(new SshClient("192.168.1.149", "pi", "raspberry"), new string[] { killEmuStation, killMame, command });
+                }
+                //Console.WriteLine($"Attempting to run {romPath}");
+
+
+
+            }
         }
 
         protected static string GetRunRomCommand(string rfi) //string romPath, string system = "mame2000"
@@ -223,7 +308,7 @@ print(resp)";
                 string command = GetRunRomCommand(romPath);
 
                 ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, command });
-
+                //RunSSHCommands(new SshClient("192.168.1.148", "pi", "raspberry"), new string[] { killEmuStation,  command });
             }
 
         }
@@ -305,6 +390,117 @@ print(resp)";
 
             }
         }
+
+        protected static void SynchronizeClientToServerDirectories(string ipAddressClient, WinSCP.Session session, string localPath, string remotePath, bool removeFiles = false)
+        {
+
+            try
+            {
+                //using (var session = new WinSCP.Session())
+                //{
+                if (!session.Opened)
+                {
+                    session.FileTransferred += FileTransferred;
+                    session.Failed += Session_Failed;
+                    // Connect
+                    session.Open(new SessionOptions
+                    {
+                        GiveUpSecurityAndAcceptAnySshHostKey = true,
+                        Protocol = Protocol.Sftp,
+                        HostName = ipAddressClient,//"192.168.1.117",//"192.168.1.149",
+                        UserName = "pi",
+                        Password = "raspberry"// ,SshHostKeyFingerprint = "ssh-rsa 2048 xxxxxxxxxxx...="
+                    });
+                }
+
+                // Download files
+                TransferOptions transferOptions = new TransferOptions();
+                transferOptions.TransferMode = TransferMode.Binary;
+                transferOptions.AddRawSettings("FtpListAll", "0");
+
+                SynchronizationResult transferResult = null;
+
+                //string remotePath = $"/home/pi/.emulationstation/{folder}/*";
+                //string localPath = $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\{folder}\";
+
+                transferResult = session.SynchronizeDirectories(SynchronizationMode.Local, localPath, remotePath, removeFiles, false, SynchronizationCriteria.Either);
+
+                // Throw on any error
+                transferResult.Check();
+
+                // Print results
+                foreach (TransferEventArgs transfer in transferResult.Downloads)
+                {
+                    Console.WriteLine("Synchronize of {0} succeeded", transfer.FileName);
+                }
+
+            }
+            catch (InvalidOperationException ioe)
+            {
+                Console.WriteLine("InvalidOperationException: {0}", ioe);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: {0}", e);
+
+            }
+        }
+
+        protected static void SynchronizeServerToClientDirectories(string ipAddressClient, WinSCP.Session session, string localPath, string remotePath, bool removeFiles = false)
+        {
+
+            try
+            {
+                //using (var session = new WinSCP.Session())
+                //{
+                if (!session.Opened)
+                {
+                    session.FileTransferred += FileTransferred;
+                    session.Failed += Session_Failed;
+                    // Connect
+                    session.Open(new SessionOptions
+                    {
+                        GiveUpSecurityAndAcceptAnySshHostKey = true,
+                        Protocol = Protocol.Sftp,
+                        HostName = ipAddressClient,//"192.168.1.117",//"192.168.1.149",
+                        UserName = "pi",
+                        Password = "raspberry"// ,SshHostKeyFingerprint = "ssh-rsa 2048 xxxxxxxxxxx...="
+                    });
+                }
+
+                // Download files
+                TransferOptions transferOptions = new TransferOptions();
+                transferOptions.TransferMode = TransferMode.Binary;
+                transferOptions.AddRawSettings("FtpListAll", "0");
+
+                SynchronizationResult transferResult = null;
+
+                //string remotePath = $"/home/pi/.emulationstation/{folder}/*";
+                //string localPath = $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\{folder}\";
+
+                transferResult = session.SynchronizeDirectories(SynchronizationMode.Remote, localPath, remotePath, removeFiles, false, SynchronizationCriteria.Either);
+
+                // Throw on any error
+                transferResult.Check();
+
+                // Print results
+                foreach (TransferEventArgs transfer in transferResult.Downloads)
+                {
+                    Console.WriteLine("Synchronize of {0} succeeded", transfer.FileName);
+                }
+
+            }
+            catch (InvalidOperationException ioe)
+            {
+                Console.WriteLine("InvalidOperationException: {0}", ioe);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: {0}", e);
+
+            }
+        }
+
 
         protected static void CreateDirectory(string ipClient, WinSCP.Session session, string folderPathRemote)  //$"/home/pi/RetroPie/roms/{folder}/*
         {
@@ -433,7 +629,7 @@ print(resp)";
 
                 foreach(var cmd in commands)
                 {
-                    Task.Run(() => {
+                    //Task.Run(() => {
 
                         var command = client.RunCommand(cmd);//.Execute();
                         if (!string.IsNullOrEmpty(command.Error))
@@ -447,7 +643,7 @@ print(resp)";
                             Console.WriteLine(output);
                         }
 
-                    });
+                    //});
                 }
                 client.Disconnect();
             }
@@ -458,7 +654,7 @@ print(resp)";
             using (var session = new WinSCP.Session())
             {
                 session.Timeout = TimeSpan.FromSeconds(5);
-                session.AddRawConfiguration("ExitCode1IsError", "1");
+                //session.AddRawConfiguration("ExitCode1IsError", "1");
 
                 session.Open(new SessionOptions
                 {
@@ -482,7 +678,7 @@ print(resp)";
                         if (result.IsSuccess)
                         {
                             Console.WriteLine($"Success: {result.Output}");
-                            if (result.Output.Contains("not supported"))
+                            if (result.Output != null && result.Output.Contains("not supported"))
                             {
                                 Console.WriteLine(result.Output);
                             }
@@ -561,14 +757,14 @@ print(resp)";
                     // Print results
                     foreach (TransferEventArgs transfer in transferResult.Transfers)
                     {
-                        Debug.WriteLine("Download of {0} succeeded", transfer.FileName);
+                        Console.WriteLine("Download of {0} succeeded", transfer.FileName);
                     }
 
                 }
             }
             catch (Exception e)
             {
-                Debug.WriteLine("Error: {0}", e);
+                Console.WriteLine("Error: {0}", e);
 
             }
         }
@@ -652,21 +848,22 @@ print(resp)";
 
                     foreach (string folder in artFolders)
                     {
-                        TransferOperationResult transferResult = null;
+                        SynchronizeClientToServerDirectories(ipAddressClient, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\{folder}\", $"/home/pi/.emulationstation/{folder}/");
+                        //TransferOperationResult transferResult = null;
 
-                        string remotePath = $"/home/pi/.emulationstation/{folder}/*";
-                        string localPath = $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\{folder}\";
+                        //string remotePath = $"/home/pi/.emulationstation/{folder}/*";
+                        //string localPath = $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\{folder}\";
 
-                        transferResult = session.GetFiles(remotePath, localPath, false, transferOptions);
+                        //transferResult = session.GetFiles(remotePath, localPath, false, transferOptions);
 
-                        // Throw on any error
-                        transferResult.Check();
+                        //// Throw on any error
+                        //transferResult.Check();
 
-                        // Print results
-                        foreach (TransferEventArgs transfer in transferResult.Transfers)
-                        {
-                            Console.WriteLine("Download of {0} succeeded", transfer.FileName);
-                        }
+                        //// Print results
+                        //foreach (TransferEventArgs transfer in transferResult.Transfers)
+                        //{
+                        //    Console.WriteLine("Download of {0} succeeded", transfer.FileName);
+                        //}
                     }
                 }
             }
@@ -722,10 +919,13 @@ print(resp)";
 
                 }
             }
+            catch (SessionRemoteException sre)
+            {
+                Console.WriteLine("SessionRemoteException: {0}", sre);
+            }
             catch (Exception e)
             {
-                Console.WriteLine("Error: {0}", e);
-
+                Console.WriteLine("Exception: {0}", e);
             }
         }
 
@@ -747,6 +947,17 @@ print(resp)";
                 string remotePath = $"/home/pi/blacklist.txt";
                 RemoveFile(ipAddressClient, session, remotePath);
             }
+
+                //foreach (var address in modificationRecipientAddresses)
+                //{
+                //    using (var session = new WinSCP.Session())
+                //    {
+                //        foreach (var filePath in blacklistedUrls)
+                //        {
+                //            RemoveFile(address, session, filePath);
+                //        }
+                //    }
+                //}
 
         }
 
@@ -802,17 +1013,25 @@ print(resp)";
 
                 RemovalEventArgs transferResult = null;
 
-                transferResult = session.RemoveFile(remotePath);//.GetFiles(remotePath, localPath, false, transferOptions);
+                if(session.FileExists(remotePath)) {
+                    transferResult = session.RemoveFile(remotePath);//.GetFiles(remotePath, localPath, false, transferOptions);
 
-                // Print results
-                if (transferResult.Error != null)
-                {
-                    Console.WriteLine("Error removing {0} error:{1}", transferResult.FileName, transferResult.Error);
+                    // Print results
+                    if (transferResult.Error != null)
+                    {
+                        Console.WriteLine("Error removing {0} from {1} error:{2}", transferResult.FileName, ipAddressClient, transferResult.Error);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Success removing {0} from {1}", transferResult.FileName, ipAddressClient);
+                    }
                 }
                 else
                 {
-                    Console.WriteLine("Success removing {0}", transferResult.FileName);
+                    Console.WriteLine($"Couldnt find file {remotePath} to remove on {ipAddressClient}");
                 }
+
+
                 //}
             }
             catch (Exception e)
@@ -880,7 +1099,7 @@ print(resp)";
                         // Print results
                         foreach (TransferEventArgs transfer in transferResult.Transfers)
                         {
-                            Debug.WriteLine("Download of {0} succeeded", transfer.FileName);
+                            Console.WriteLine("Download of {0} succeeded", transfer.FileName);
                         }
                     }
 
@@ -890,7 +1109,7 @@ print(resp)";
             }
             catch (Exception e)
             {
-                Debug.WriteLine("Error: {0}", e);
+                Console.WriteLine("Error: {0}", e);
 
             }
         }
@@ -904,29 +1123,29 @@ print(resp)";
         {
             if (e.Error == null)
             {
-                Debug.WriteLine("Upload of {0} succeeded", e.FileName);
+                Console.WriteLine("Upload of {0} succeeded", e.FileName);
             }
             else
             {
-                Debug.WriteLine("Upload of {0} failed: {1}", e.FileName, e.Error);
+                Console.WriteLine("Upload of {0} failed: {1}", e.FileName, e.Error);
             }
 
             if (e.Chmod != null)
             {
                 if (e.Chmod.Error == null)
                 {
-                    Debug.WriteLine(
+                    Console.WriteLine(
                         "Permissions of {0} set to {1}", e.Chmod.FileName, e.Chmod.FilePermissions);
                 }
                 else
                 {
-                    Debug.WriteLine(
+                    Console.WriteLine(
                         "Setting permissions of {0} failed: {1}", e.Chmod.FileName, e.Chmod.Error);
                 }
             }
             else
             {
-                Debug.WriteLine("Permissions of {0} kept with their defaults", e.Destination);
+                Console.WriteLine("Permissions of {0} kept with their defaults", e.Destination);
             }
 
             if (e.Touch != null)
@@ -945,7 +1164,7 @@ print(resp)";
             else
             {
                 // This should never happen during "local to remote" synchronization
-                Debug.WriteLine(
+                Console.WriteLine(
                     "Timestamp of {0} kept with its default (current time)", e.Destination);
             }
         }
