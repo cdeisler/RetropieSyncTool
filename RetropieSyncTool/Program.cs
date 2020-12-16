@@ -117,23 +117,33 @@ print(resp)";
             //}
             //GetArtwork("192.168.1.117");
 
+
+            //CleanGamelistNodes();
+            //return;
+
+
             using (var session = new WinSCP.Session())
             {
-                ProcessBlacklist("192.168.1.117");
-                SynchronizeClientToServerDirectories("192.168.1.117", session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
-               
+                var sourceIP = "192.168.1.117";
+                ProcessBlacklist(sourceIP);
+                SynchronizeClientToServerDirectories(sourceIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
+                SynchronizeClientToServerDirectories(sourceIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\configs\arcade\", "/opt/retropie/configs/arcade/", true);
             }
 
             using (var session = new WinSCP.Session())
             {
-                SynchronizeServerToClientDirectories("192.168.1.149", session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
+                var destIP = "192.168.1.149";
+                SynchronizeServerToClientDirectories(destIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
+                SynchronizeServerToClientDirectories(destIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\configs\arcade\", "/opt/retropie/configs/arcade/", true);
             }
 
 
-            if (fetchArtwork) GetArtwork("192.168.1.117");
+            if (true) GetArtwork("192.168.1.117");
+
+            // replaced with sync above
+            //if (true) FetchConfig("192.168.1.117");
 
 
-         
 
             //foreach (var ip in v3Clients) {
             //    ProcessBlacklist(ip, v3Clients);
@@ -192,10 +202,35 @@ print(resp)";
 
             //fetchArtwork = true;
             //if (fetchArtwork) GetArtwork("192.168.1.117");
-            if (fetchConfig) FetchConfig();
+            //if (fetchConfig) FetchConfig();
 
             Console.WriteLine("Press any key to exit.");
             Console.ReadLine();
+        }
+
+        protected static void CleanGamelistNodes()
+        {
+            string path = Path.Combine(@"D:\RetroPie\RetroPieSync\127.0.0.1\gamelists\arcade\", $@"gamelist.xml");
+
+            XmlDocument xmlDoc = new XmlDocument();
+
+            if (!string.IsNullOrEmpty(path))
+            {
+                xmlDoc.Load(path);
+            }
+
+            var allGameNodes = xmlDoc.SelectNodes("//gameList/game/desc");
+            int ct = allGameNodes.Count;
+
+            for (int i = 0; i < ct; i++)
+            {
+                var node = allGameNodes.Item(i);
+                node.InnerText = "";
+            }
+
+            var xml = xmlDoc.OuterXml.ToString();
+            xmlDoc.Save(path);
+
         }
 
         protected static void RunRomTests()
@@ -712,7 +747,7 @@ print(resp)";
             }
         }
 
-        protected static void FetchConfig()
+        protected static void FetchConfig(string ipAddressClient)
         {
             ///opt/retropie/configs/*.cfg
             try
@@ -722,7 +757,14 @@ print(resp)";
                     session.FileTransferred += FileTransferred;
                     session.Failed += Session_Failed;
                     // Connect
-                    session.Open(sessionOptions);
+                    session.Open(new SessionOptions
+                    {
+                        GiveUpSecurityAndAcceptAnySshHostKey = true,
+                        Protocol = Protocol.Sftp,
+                        HostName = ipAddressClient,//"192.168.1.117",//"192.168.1.149",
+                        UserName = "pi",
+                        Password = "raspberry"// ,SshHostKeyFingerprint = "ssh-rsa 2048 xxxxxxxxxxx...="
+                    });
 
                     // Download files
                     TransferOptions transferOptions = new TransferOptions();
@@ -733,8 +775,8 @@ print(resp)";
 
                     if (isPushToHost) //Push
                     {
-                        string remotePath = $"/opt/retropie/configs/fba/";
-                        string localPath = $@"D:\RetroPie\RetroPieSync\{sourceHost}\configs\fba\*";
+                        string remotePath = $"/opt/retropie/configs/";
+                        string localPath = $@"D:\RetroPie\RetroPieSync\{ipAddressClient}\configs\*";
 
                         Directory.CreateDirectory(localPath.Replace("*", ""));
 
@@ -743,8 +785,8 @@ print(resp)";
                     }
                     else //Pull Sync
                     {
-                        string remotePath = $"/opt/retropie/configs/fba/*";
-                        string localPath = $@"D:\RetroPie\RetroPieSync\{destinationHost}\configs\fba\";
+                        string remotePath = $"/opt/retropie/configs/*";
+                        string localPath = $@"D:\RetroPie\RetroPieSync\{ipAddressClient}\configs\";
 
                         Directory.CreateDirectory(localPath.Replace("*", ""));
 
@@ -933,6 +975,11 @@ print(resp)";
         {
             GetBlacklistFile(ipAddressClient);
             string localPath = $@"D:\RetroPie\RetroPieSync\{ipAddressClient}\home\pi\blacklist.txt";
+            if (!File.Exists(localPath))
+            {
+                Console.WriteLine($"Not found for processing: {localPath}");
+                return;
+            }
 
             var blacklistedUrls = File.ReadLines(localPath).Distinct().ToList();
 
@@ -948,16 +995,7 @@ print(resp)";
                 RemoveFile(ipAddressClient, session, remotePath);
             }
 
-                //foreach (var address in modificationRecipientAddresses)
-                //{
-                //    using (var session = new WinSCP.Session())
-                //    {
-                //        foreach (var filePath in blacklistedUrls)
-                //        {
-                //            RemoveFile(address, session, filePath);
-                //        }
-                //    }
-                //}
+            File.Delete(localPath);
 
         }
 
