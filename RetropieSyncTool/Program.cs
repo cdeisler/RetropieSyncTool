@@ -69,7 +69,7 @@ print(resp)";
         //"{} 0 _SYS_ {} '{}'".format( RUNCOMMAND, system, path )
         protected static string RUNCOMMAND = "/opt/retropie/supplementary/runcommand/runcommand.sh";
         protected static string EMULATIONSTATION = "/opt/retropie/supplementary/emulationstation/emulationstation.sh";
-    
+
         // Setup session options
         static SessionOptions sessionOptions = new SessionOptions
         {
@@ -120,25 +120,34 @@ print(resp)";
 
             //CleanGamelistNodes();
             //return;
+            //BuildGamelistXml();
 
 
             using (var session = new WinSCP.Session())
             {
                 var sourceIP = "192.168.1.117";
+                ExecuteSSHCommands(sourceIP, new string[] { killEmuStation });
                 ProcessBlacklist(sourceIP);
                 SynchronizeClientToServerDirectories(sourceIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
                 SynchronizeClientToServerDirectories(sourceIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\configs\arcade\", "/opt/retropie/configs/arcade/", true);
+                SyncArtwork(sourceIP);
             }
 
             using (var session = new WinSCP.Session())
             {
                 var destIP = "192.168.1.149";
+                ExecuteSSHCommands(destIP, new string[] { killEmuStation });
                 SynchronizeServerToClientDirectories(destIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
                 SynchronizeServerToClientDirectories(destIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\configs\arcade\", "/opt/retropie/configs/arcade/", true);
+                SyncArtwork(destIP);
             }
 
+            foreach (var ip in v3Clients)
+            {
+                RebootComputerOverSSH(ip);// "192.168.1.149");
+            }
 
-            if (true) GetArtwork("192.168.1.117");
+            //if (true) GetArtwork("192.168.1.117");
 
             // replaced with sync above
             //if (true) FetchConfig("192.168.1.117");
@@ -155,12 +164,6 @@ print(resp)";
             //}
 
 
-            foreach (var ip in v3Clients)
-            {
-                RebootComputerOverSSH(ip);// "192.168.1.149");
-            }
-
-            
             //ProcessDATFile();
             //NewDatFromNeoGeoGames();
 
@@ -291,11 +294,11 @@ print(resp)";
             var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg &";
             //var command = $@"sudo {RUNCOMMAND} 0 _SYS_ {parent} {rfi}";  //export DISPLAY=:0
 
-//            test = @"client = SSHClient()
-//client.connect({}, {}, {})
-//session = client.get_transport().open_session()
-//AgentRequestHandler(session)
-//session.exec_command('{0}')";
+            //            test = @"client = SSHClient()
+            //client.connect({}, {}, {})
+            //session = client.get_transport().open_session()
+            //AgentRequestHandler(session)
+            //session.exec_command('{0}')";
 
             Console.WriteLine($"run command:\r\n{command}");
             return command;
@@ -347,7 +350,7 @@ print(resp)";
             }
 
         }
-        
+
         protected static void WriteRom(string ipClient, WinSCP.Session session, string romPathLocal, string romPathDestination)  //$"/home/pi/RetroPie/roms/{folder}/*
         {
             try
@@ -374,42 +377,42 @@ print(resp)";
                     session.Open(sessionOptions);
                 }
 
-                    // Download files
-                    TransferOptions transferOptions = new TransferOptions();
-                    transferOptions.TransferMode = TransferMode.Binary;
-                    transferOptions.AddRawSettings("FtpListAll", "0");
+                // Download files
+                TransferOptions transferOptions = new TransferOptions();
+                transferOptions.TransferMode = TransferMode.Binary;
+                transferOptions.AddRawSettings("FtpListAll", "0");
 
-                    //foreach (string folder in romFolders)
-                    //{
-                        TransferOperationResult transferResult = null;
+                //foreach (string folder in romFolders)
+                //{
+                TransferOperationResult transferResult = null;
 
-                        //if (isPushToHost) //Push
-                        //{
-                        string remotePath = romPathDestination;//$"/home/pi/RetroPie/roms/{folder}/*";
-                        //string localPath = $@"D:\RetroPie\RetroPieSync\{destinationHost}\roms\{folder}\*";
-                        string localPath = romPathLocal;
-                        //if (isFetchArtwork)
-                        //{
-                        //    remotePath = $"/home/pi/.emulationstation/downloaded_images/*";
-                        //    localPath = $@"D:\RetroPie\RetroPieSync\{sourceHost}\downloaded_images\";
-                        //}x
+                //if (isPushToHost) //Push
+                //{
+                string remotePath = romPathDestination;//$"/home/pi/RetroPie/roms/{folder}/*";
+                                                       //string localPath = $@"D:\RetroPie\RetroPieSync\{destinationHost}\roms\{folder}\*";
+                string localPath = romPathLocal;
+                //if (isFetchArtwork)
+                //{
+                //    remotePath = $"/home/pi/.emulationstation/downloaded_images/*";
+                //    localPath = $@"D:\RetroPie\RetroPieSync\{sourceHost}\downloaded_images\";
+                //}x
 
-                        //var transferResult2 = session.PutFileToDirectory(localPath, remotePath, false, transferOptions);
-                    var transferResult2 = session.PutFiles(localPath, remotePath, false, transferOptions);
-                    //.PutFiles(localPath, remotePath, false, transferOptions);
+                //var transferResult2 = session.PutFileToDirectory(localPath, remotePath, false, transferOptions);
+                var transferResult2 = session.PutFiles(localPath, remotePath, false, transferOptions);
+                //.PutFiles(localPath, remotePath, false, transferOptions);
 
-                    //}
+                //}
 
 
-                    // Throw on any error
-                    transferResult2.Check();
+                // Throw on any error
+                transferResult2.Check();
 
-                    // Print results
-                    foreach (TransferEventArgs transfer in transferResult2.Transfers)
-                    {
-                        Console.WriteLine("WriteRom of {0} succeeded", transfer.FileName);
-                    }
-                    //}
+                // Print results
+                foreach (TransferEventArgs transfer in transferResult2.Transfers)
+                {
+                    Console.WriteLine("WriteRom of {0} succeeded", transfer.FileName);
+                }
+                //}
 
                 //}
 
@@ -594,7 +597,7 @@ print(resp)";
 
                 List<RemoteFileInfo> romsByPath = new List<RemoteFileInfo>();
 
-                foreach(RemoteFileInfo di in directories)
+                foreach (RemoteFileInfo di in directories)
                 {
                     try
                     {
@@ -621,7 +624,7 @@ print(resp)";
 
                     //romsByPath.Add(di.FullName);
                 }
-                
+
                 var r = new Random();
                 randomRom = romsByPath.ElementAt(r.Next(1, romsByPath.Count()));
 
@@ -635,7 +638,7 @@ print(resp)";
             string command = GetRunRomCommand(randomRom.FullName);
             //ddragon3.zip
             //string command = GetRunMameCommand("ddragon3");// randomRom.Name.Replace(".zip", "1943.zip"));
-            ExecuteSSHCommands(ipClient, new string[] {  killEmuStation, killMame, command }); //killEmuStation, killMame,  
+            ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, command }); //killEmuStation, killMame,  
             //RunSSHCommands(new SshClient(ipClient, "pi", "raspberry"), new string[] { killEmuStation, killMame, command });
         }
 
@@ -648,11 +651,12 @@ print(resp)";
                 if (!string.IsNullOrEmpty(command.Error))
                 {
                     var error = command.Error;
-                } else
+                }
+                else
                 {
                     var output = command.Result;
                 }
-                
+
             }
         }
 
@@ -662,21 +666,21 @@ print(resp)";
             {
                 client.Connect();
 
-                foreach(var cmd in commands)
+                foreach (var cmd in commands)
                 {
                     //Task.Run(() => {
 
-                        var command = client.RunCommand(cmd);//.Execute();
-                        if (!string.IsNullOrEmpty(command.Error))
-                        {
-                            var error = command.Error;
-                            Console.WriteLine(error);
-                        }
-                        else
-                        {
-                            var output = command.Result;
-                            Console.WriteLine(output);
-                        }
+                    var command = client.RunCommand(cmd);//.Execute();
+                    if (!string.IsNullOrEmpty(command.Error))
+                    {
+                        var error = command.Error;
+                        Console.WriteLine(error);
+                    }
+                    else
+                    {
+                        var output = command.Result;
+                        Console.WriteLine(output);
+                    }
 
                     //});
                 }
@@ -863,7 +867,7 @@ print(resp)";
             }
         }
 
-        protected static void GetArtwork(string ipAddressClient)
+        protected static void SyncArtwork(string ipAddressClient)
         {
             try
             {
@@ -1012,7 +1016,7 @@ print(resp)";
             var blacklistUrls = File.ReadLines(localPath).Distinct().ToList();
             var cachedBlacklistUrls = File.ReadLines(localCachedPath).Distinct().ToList();
 
-            foreach(var url in blacklistUrls)
+            foreach (var url in blacklistUrls)
             {
                 if (!cachedBlacklistUrls.Contains(url))
                     cachedBlacklistUrls.Add(url);
@@ -1051,7 +1055,8 @@ print(resp)";
 
                 RemovalEventArgs transferResult = null;
 
-                if(session.FileExists(remotePath)) {
+                if (session.FileExists(remotePath))
+                {
                     transferResult = session.RemoveFile(remotePath);//.GetFiles(remotePath, localPath, false, transferOptions);
 
                     // Print results
@@ -1243,7 +1248,7 @@ print(resp)";
 
             mameNode.RemoveAll();
 
-            for (int i=0; i<ct; i++)
+            for (int i = 0; i < ct; i++)
             {
                 var node = gameNeoGeoNodes.Item(i);
                 mameNode.AppendChild(node);
@@ -1268,7 +1273,7 @@ print(resp)";
             try
             {
                 //string remoteIPClient = "192.168.1.117";
-              
+
                 XmlDocument xmlDoc = LoadDatFile("mame2003-lr-no-clones-no-neogeo.xml");
 
                 var xmlRootNodeNode = "datafile";// mame
@@ -1402,13 +1407,83 @@ print(resp)";
                 return xml;
 
             }
-            catch (Exception exc) {
+            catch (Exception exc)
+            {
                 Console.WriteLine($"Exception: {exc}");
             }
             return "";
 
         }
 
+
+        /**********************************************************************/
+        /************** Gamelist.xml ******************************************/
+
+        public static void BuildGamelistXml()
+        {
+            string path = Path.Combine($@"D:\RetroPie\RetroPieSync\{cachingServerHost}\gamelists\arcade\gamelist.xml");
+
+            Dictionary<string, XmlNode> romXmlData = new Dictionary<string, XmlNode>();
+
+            XmlDocument xmlDoc = new XmlDocument();
+
+            if (!File.Exists(path))
+            {
+                Console.WriteLine("Path missing");
+                return;
+            }
+            xmlDoc.Load(path);
+
+            var allGameNodes = xmlDoc.SelectNodes($"//gameList/game");
+
+            int ct = allGameNodes.Count;
+
+            Console.WriteLine($"{ct} games found.");
+
+            for (int i = 0; i < ct; i++)
+            {
+                var item = allGameNodes.Item(i);
+                var node = item.SelectSingleNode("path");//.Attributes["name"].Value;
+                var success = Uri.TryCreate(node.InnerText, UriKind.Relative, out Uri result);
+                var fileName = Path.GetFileName(node.InnerText);
+
+                if (!string.IsNullOrEmpty(fileName))
+                {
+                    if (node.InnerText.ToLower().Contains("working"))
+                    {
+                        if (romXmlData.ContainsKey(fileName))
+                        {
+                            var existingNode = romXmlData[fileName];
+                        }
+                        else
+                        {
+                            romXmlData.Add(fileName, node);
+                        }
+                       
+                    }
+                    else
+                    {
+                        if (node.InnerText.ToLower().Contains("working"))
+                        {
+                            var test = true;
+                        }
+                        Console.WriteLine($"Excluding {node.InnerText}");
+                        xmlDoc.DocumentElement.RemoveChild(item);
+                    }
+
+                }
+            }
+
+            //processedXmlDoc.AppendChild(xmlDoc.ImportNode(xmlDoc.DocumentElement, false));
+
+            //foreach (var key in romXmlData.Keys)
+            //{
+            //    processedXmlDoc.FirstChild.AppendChild(romXmlData[key]);
+            //}
+
+            xmlDoc.Save($@"D:\RetroPie\RetroPieSync\{cachingServerHost}\gamelists\arcade\gamelist-{DateTime.Now.Millisecond}.xml");
+            
+        }
     }
 
 }
