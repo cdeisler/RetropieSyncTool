@@ -11,3 +11,12 @@ export TERMINFO=/usr/lib/terminfo
 echo $SHELL
 echo $TERM
 setenv TERMINFO /usr/lib/terminfo
+
+/etc# setenv TERM xterm
+
+
+C:\Program Files (x86)\WinSCP\WinSCP.com /ini=nul /script=
+
+sudo nohup /opt/retropie/supplementary/runcommand/runcommand.sh 0 _SYS_ arcade /home/pi/RetroPie/roms/arcade/battlera.zip
+
+ExaminerScheduleWizard.asp

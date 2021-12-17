@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using System.Xml;
@@ -94,7 +95,7 @@ print(resp)";
 
             //var command = "subprocess.Popen('/opt/retropie/supplementary/runcommand/runcommand.sh', '0', '_SYS_', 'arcade' '/home/pi/RetroPie/roms/arcade/1941.zip')";
 
-            string remoteIPClient = "192.168.1.149";
+            string remoteIPClient = "192.168.0.1";// "192.168.1.149";
             var v3Clients = new string[] { "192.168.1.149", "192.168.1.117" };
 
             //RebootComputerOverSSH("192.168.1.149");
@@ -123,24 +124,119 @@ print(resp)";
             //BuildGamelistXml();
 
 
-            using (var session = new WinSCP.Session())
-            {
-                var sourceIP = "192.168.1.117";
-                ExecuteSSHCommands(sourceIP, new string[] { killEmuStation });
-                ProcessBlacklist(sourceIP);
-                SynchronizeClientToServerDirectories(sourceIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
-                SynchronizeClientToServerDirectories(sourceIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\configs\arcade\", "/opt/retropie/configs/arcade/", true);
-                SyncArtwork(sourceIP);
-            }
+            //using (var session = new WinSCP.Session())
+            //{
+                var sourceIP = "192.168.0.214";
+
+                List<string> installApache2 = new List<string>() {
+                    //"sudo apt-get upgrade -y --assume-yes",
+                    "sudo apt-get update -y --assume-yes", "sudo apt-get install git make -y --assume-yes", "sudo apt-get install apache2 -y",
+                    "cd /var/www/html", "sudo chown pi: index.html",
+                    "cd ~/",
+                    "git clone https://github.com/ajayjohn/webCoRE",
+                    "echo entering webcore",
+                    "cd webCoRE",
+                    "echo checkout",
+                    "git checkout hubitat-patches",
+                    "cd dashboard",
+                    "sudo ln -s `pwd` /var/www/webcore",
+                     "echo modify default.conf",
+                     "echo here", "cd /etc/apache2/sites-available/", "sudo chown pi: 000-default.conf",
+                     "echo a2enmod",
+                     "echo | sudo a2enmod rewrite",
+                     "echo | sudo service apache2 restart",
+
+                     "sudo chmod -R /var/www/webcore 400",
+                     @"find /var/www/webcore -type d -exec chmod -R u+x {} \;",
+
+                     "sudo chown pi: /etc/apache2/apache2.conf",
+                     "cd /etc/apache2/",
+
+
+                     "echo \"<Directory /var/www/webcore/>\" >> apache2.conf",
+                     "echo \"Options Indexes FollowSymLinks\" >> apache2.conf",
+                     "echo \"AllowOverride None\" >> apache2.conf",
+                     "echo \"Require all granted\" >> apache2.conf",
+                     "echo \"</Directory>\" >> apache2.conf",
+
+                     "sudo service apache2 reload",
+
+
+                     "exit 1"
+                    //"sudo nano /etc/apache2/sites-available/000-default.conf"
+
+                    //
+                    //
+                };
+
+            //var ssh = new SshClient("192.168.0.214", "pi", "raspberry");
+
+            //string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"install-apache.sh");
+            string path = Path.Combine("c:/temp/", $@"install-apache.sh");
+
+            File.WriteAllLines(path, installApache2);
+
+            //RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), installApache2);
+            //RunSSHCommands(new SshClient("192.168.0.214", "pi", "raspberry"), installApache2.ToArray());
+
+
+            //installApache2.ForEach(cmd => {
+            //    Console.WriteLine($"running {cmd} on {sourceIP}");
+            //    RunSSHCommands(new SshClient("192.168.0.214", "pi", "raspberry"), installApache2.ToArray());
+            //    //ExecuteSSHCommands(sourceIP, new string[] { cmd });
+            //});
+
+            //ProcessBlacklist(sourceIP);
+            //SynchronizeClientToServerDirectories(sourceIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
+            //SynchronizeClientToServerDirectories(sourceIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\configs\arcade\", "/opt/retropie/configs/arcade/", true);
+            //SyncArtwork(sourceIP);
+            //}
 
             using (var session = new WinSCP.Session())
             {
-                var destIP = "192.168.1.149";
-                ExecuteSSHCommands(destIP, new string[] { killEmuStation });
-                SynchronizeServerToClientDirectories(destIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
-                SynchronizeServerToClientDirectories(destIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\configs\arcade\", "/opt/retropie/configs/arcade/", true);
-                SyncArtwork(destIP);
+                session.Open(new SessionOptions
+                {
+                    GiveUpSecurityAndAcceptAnySshHostKey = true,
+                    Protocol = Protocol.Sftp,
+                    HostName = sourceIP,
+                    UserName = "pi",
+                    Password = "raspberry"
+                });
+
+                var permissions = new FilePermissions() {
+                    UserExecute = true,
+                    UserWrite = true,
+                    OtherWrite = true,
+                    OtherRead = true
+                };
+
+                string pathConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"000-default.conf");
+
+                //RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "echo here", "cd /etc/apache2/sites-available/", "sudo chown pi: 000-default.conf" });
+
+           
+
+                //var destIP = sourceIP;// "192.168.1.149";
+                session.PutFileToDirectory(path, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                //session.MoveFile(path, "/usr/local/install-apache.sh");
+
+                RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "sudo /tmp/install-apache.sh" });
+
+                //session.RemoveFile("/etc/apache2/sites-available/000-default.conf");
+                session.PutFileToDirectory(pathConf, "/etc/apache2/sites-available/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+
+
+                //ExecuteSSHCommands(destIP, new string[] { killEmuStation });
+                //SynchronizeServerToClientDirectories(destIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\home\pi\RetroPie\roms\arcade\", "/home/pi/RetroPie/roms/arcade/", true);
+                //SynchronizeServerToClientDirectories(destIP, session, $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\configs\arcade\", "/opt/retropie/configs/arcade/", true);
+                //SyncArtwork(destIP);
             }
+
+
+            Console.WriteLine("Press any key to exit.");
+            Console.ReadLine();
+
+
 
             foreach (var ip in v3Clients)
             {
@@ -304,6 +400,27 @@ print(resp)";
             return command;
         }
 
+        public static string SendCommand(string cmd, ShellStream sh)
+        {
+            StreamReader reader = null;
+            try
+            {
+                reader = new StreamReader(sh);
+                StreamWriter writer = new StreamWriter(sh);
+                writer.AutoFlush = true;
+                writer.WriteLine(cmd);
+                while (sh.Length == 0)
+                {
+                    Thread.Sleep(500);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("exception: " + ex.ToString());
+            }
+            return reader.ReadToEnd();
+        }
+
         protected static string GetRunMameCommand(string romName, string emulator = "mame4all")  //1943
         {
             ///opt/retropie/emulators/mame4all/mame "1943"
@@ -457,7 +574,7 @@ print(resp)";
                 transferOptions.AddRawSettings("FtpListAll", "0");
 
                 SynchronizationResult transferResult = null;
-
+               
                 //string remotePath = $"/home/pi/.emulationstation/{folder}/*";
                 //string localPath = $@"D:\RetroPie\RetroPieSync\{cachingServerHost}\{folder}\";
 
@@ -660,17 +777,65 @@ print(resp)";
             }
         }
 
+        protected static void RunSSHCommandStream(SshClient vclient, List<string> commands)
+        {
+            using (vclient)// var vclient = new SshClient("host", "username", "password"))
+            {
+                vclient.Connect();
+                using (ShellStream shell = vclient.CreateShellStream("dumb", 80, 24, 800, 600, 1024))
+                {
+                    //shell.DataReceived += Shell_DataReceived;
+
+                    commands.ForEach(command => 
+                    {
+                        var result = SendCommand(command, shell);
+                        //Console.WriteLine(result);
+                    });
+
+                    string line;
+                    while ((line = shell.ReadLine(TimeSpan.FromMinutes(30))) != null)
+                    {
+                        Console.WriteLine(line);
+                        shell.Flush();
+                        // if a termination pattern is known, check it here and break to exit immediately
+                    }
+
+                    //Console.WriteLine(SendCommand("comand 1", shell));
+
+                    shell.Close();
+                }
+                vclient.Disconnect();
+            }
+        }
+
+        private static void Shell_DataReceived(object sender, Renci.SshNet.Common.ShellDataEventArgs e)
+        {
+            Console.WriteLine(">>" + e.Line);
+        }
+
         protected static void RunSSHCommands(SshClient client, string[] commands)
         {
             using (client)// var client = new SshClient("192.168.1.149", "pi", "raspberry"))
             {
+                client.ErrorOccurred += Client_ErrorOccurred;
+                //client.HostKeyReceived += Client_HostKeyReceived;
                 client.Connect();
 
                 foreach (var cmd in commands)
                 {
                     //Task.Run(() => {
 
-                    var command = client.RunCommand(cmd);//.Execute();
+                    var command = client.CreateCommand(cmd);// client.RunCommand(cmd);//.Execute();
+                    var result = command.Execute();
+
+                    Console.Write(result);
+
+                    var reader = new StreamReader(command.ExtendedOutputStream);
+                    Console.WriteLine("DEBUG:");
+                    Console.Write(reader.ReadToEnd());
+
+                    var cmdResult = command.Result;
+
                     if (!string.IsNullOrEmpty(command.Error))
                     {
                         var error = command.Error;
@@ -686,6 +851,16 @@ print(resp)";
                 }
                 client.Disconnect();
             }
+        }
+
+        private static void Client_HostKeyReceived(object sender, Renci.SshNet.Common.HostKeyEventArgs e)
+        {
+            Console.WriteLine($"HostKeyReceived: {e.HostKeyName} id:{e.FingerPrint}");
+        }
+
+        private static void Client_ErrorOccurred(object sender, Renci.SshNet.Common.ExceptionEventArgs e)
+        {
+            Console.WriteLine($"error: {e.Exception.Message}");
         }
 
         protected static void ExecuteSSHCommands(string ipClient, string[] commands)

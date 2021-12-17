@@ -61,6 +61,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="000-default.conf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="App.config" />
     <None Include="DatFiles\MAME_0.37b5_mame2000.dat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
