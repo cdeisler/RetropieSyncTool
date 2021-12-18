@@ -140,7 +140,7 @@ namespace RetropieSyncTool
             {
                 "echo modify default.conf",
 
-                "cd /etc/apache2/sites-available/", "sudo chown -R www-data:www-data: 000-default.conf",
+                "cd /etc/apache2/sites-available/", "sudo chown -R www-data 000-default.conf",
                 
                 //"sudo chown -R www-data /var/www",
                 //"sudo chgrp -R www-data /var/www",
@@ -152,16 +152,16 @@ namespace RetropieSyncTool
                 "sudo chmod -R /var/www/webcore 400",
                 @"find /var/www/webcore -type d -exec chmod -R u+x {} \;",
 
-                "sudo chown www-data:www-data /etc/apache2/apache2.conf",
-                "sudo chown -R www-data:www-data /etc/apache2/sites-available/",
-                "sudo chown www-data:www-data /etc/apache2/apache2.conf",
+                "sudo chown www–data /etc/apache2/apache2.conf",
+                "sudo chown -R www–data /etc/apache2/sites-available/",
+                "sudo chown www–data /etc/apache2/apache2.conf",
                 "cd /etc/apache2/",
 
-                "echo \"<Directory /var/www/webcore/>\" >> apache2.conf",
-                "echo \"Options Indexes FollowSymLinks\" >> apache2.conf",
-                "echo \"AllowOverride None\" >> apache2.conf",
-                "echo \"Require all granted\" >> apache2.conf",
-                "echo \"</Directory>\" >> apache2.conf",
+                //"echo \"<Directory /var/www/webcore/>\" >> apache2.conf",
+                //"echo \"Options Indexes FollowSymLinks\" >> apache2.conf",
+                //"echo \"AllowOverride None\" >> apache2.conf",
+                //"echo \"Require all granted\" >> apache2.conf",
+                //"echo \"</Directory>\" >> apache2.conf",
 
                 "sudo service apache2 reload",
                 "echo exit"
@@ -197,7 +197,7 @@ cd /tmp
 mv -f 000-default.conf /etc/apache2/sites-available/
 mv -f apache2.conf /etc/apache2/
 
-sudo chown -R www-data:www-data /etc/apache2/sites-available/
+sudo chown -R www-data /etc/apache2/sites-available/
 sudo chmod 775 '/etc/apache2/sites-available/'
 
 sudo find /var/www -type d -exec chmod 2750 {} \+
@@ -285,7 +285,7 @@ echo exit
 
             Console.WriteLine("Press any key to exit.");
             Console.ReadLine();
-
+            return;
 
 
             foreach (var ip in v3Clients)
