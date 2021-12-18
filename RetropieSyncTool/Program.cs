@@ -197,11 +197,17 @@ cd /tmp
 mv -f 000-default.conf /etc/apache2/sites-available/
 mv -f apache2.conf /etc/apache2/
 
+cd /etc/apache2/
+sed -i '1s/^\xEF\xBB\xBF//' apache2.conf
+
 sudo chown -R www-data /etc/apache2/sites-available/
 sudo chmod 775 '/etc/apache2/sites-available/'
 
 sudo find /var/www -type d -exec chmod 2750 {} \+
 sudo find /var/www -type f -exec chmod 640 {} \+
+
+sudo chown -R www-data /var/www
+sudo chgrp -R www-data /var/www
      
 
 echo exit
