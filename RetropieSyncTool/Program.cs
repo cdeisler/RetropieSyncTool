@@ -1,16 +1,11 @@
 ﻿using Renci.SshNet;
+using Renci.SshNet.Common;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
 using System.Xml;
 using System.Xml.Linq;
 using WinSCP;
@@ -39,28 +34,35 @@ namespace RetropieSyncTool
         // sudo pip3 install paramiko
 
 
+
+
+        #region paramiko test script
+
         protected static string test = @"import paramiko
 
-ip='192.168.1.148'
-port=22
-username='pi'
-password='raspberry'
+            ip='192.168.1.148'
+            port=22
+            username='pi'
+            password='raspberry'
 
-cmd='some useful command' 
+            cmd='some useful command' 
 
-ssh=paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(ip,port,username,password)
+            ssh=paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(ip,port,username,password)
 
-stdin,stdout,stderr=ssh.exec_command(cmd)
-outlines=stdout.readlines()
-resp=''.join(outlines)
-print(resp)
+            stdin,stdout,stderr=ssh.exec_command(cmd)
+            outlines=stdout.readlines()
+            resp=''.join(outlines)
+            print(resp)
 
-stdin,stdout,stderr=ssh.exec_command('sudo reboot')
-outlines=stdout.readlines()
-resp=''.join(outlines)
-print(resp)";
+            stdin,stdout,stderr=ssh.exec_command('sudo reboot')
+            outlines=stdout.readlines()
+            resp=''.join(outlines)
+            print(resp)";
+
+        #endregion
+
         //        protected static string test = @"client = SSHClient()
         //client.connect(host, port, username)
         //session = client.get_transport().open_session()
@@ -98,6 +100,8 @@ print(resp)";
             string remoteIPClient = "192.168.0.1";// "192.168.1.149";
             var v3Clients = new string[] { "192.168.1.149", "192.168.1.117" };
 
+            #region Mame / Tmek Files
+
             //RebootComputerOverSSH("192.168.1.149");
 
             //RunRomTests();
@@ -106,6 +110,7 @@ print(resp)";
             //RunRom("192.168.1.149", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
 
             //ExecuteSSHCommands("192.168.1.148", new string[] {  command });
+
 
             //C:\Users\CJ\Downloads\MAME2003_Reference_Set_MAME0.78_ROMs_CHDs_Samples\roms
 
@@ -123,58 +128,94 @@ print(resp)";
             //return;
             //BuildGamelistXml();
 
+            #endregion 
 
             //using (var session = new WinSCP.Session())
             //{
-                var sourceIP = "192.168.0.214";
+            var sourceIP = "192.168.0.214";
 
-                List<string> installApache2 = new List<string>() {
-                    //"sudo apt-get upgrade -y --assume-yes",
-                    "sudo apt-get update -y --assume-yes", "sudo apt-get install git make -y --assume-yes", "sudo apt-get install apache2 -y",
-                    "cd /var/www/html", "sudo chown pi: index.html",
-                    "cd ~/",
-                    "git clone https://github.com/ajayjohn/webCoRE",
-                    "echo entering webcore",
-                    "cd webCoRE",
-                    "echo checkout",
-                    "git checkout hubitat-patches",
-                    "cd dashboard",
-                    "sudo ln -s `pwd` /var/www/webcore",
-                     "echo modify default.conf",
-                     "echo here", "cd /etc/apache2/sites-available/", "sudo chown pi: 000-default.conf",
-                     "echo a2enmod",
-                     "echo | sudo a2enmod rewrite",
-                     "echo | sudo service apache2 restart",
+              
 
-                     "sudo chmod -R /var/www/webcore 400",
-                     @"find /var/www/webcore -type d -exec chmod -R u+x {} \;",
+            List<string> continueInstall = new List<string>()
+            {
+                "echo modify default.conf",
 
-                     "sudo chown pi: /etc/apache2/apache2.conf",
-                     "cd /etc/apache2/",
+                "cd /etc/apache2/sites-available/", "sudo chown -R www-data:www-data: 000-default.conf",
+                
+                //"sudo chown -R www-data /var/www",
+                //"sudo chgrp -R www-data /var/www",
+
+                "echo a2enmod",
+                "sudo a2enmod rewrite",
+                "sudo service apache2 restart",
+
+                "sudo chmod -R /var/www/webcore 400",
+                @"find /var/www/webcore -type d -exec chmod -R u+x {} \;",
+
+                "sudo chown www-data:www-data /etc/apache2/apache2.conf",
+                "sudo chown -R www-data:www-data /etc/apache2/sites-available/",
+                "sudo chown www-data:www-data /etc/apache2/apache2.conf",
+                "cd /etc/apache2/",
+
+                "echo \"<Directory /var/www/webcore/>\" >> apache2.conf",
+                "echo \"Options Indexes FollowSymLinks\" >> apache2.conf",
+                "echo \"AllowOverride None\" >> apache2.conf",
+                "echo \"Require all granted\" >> apache2.conf",
+                "echo \"</Directory>\" >> apache2.conf",
+
+                "sudo service apache2 reload",
+                "echo exit"
+            };
+
+            //sudo apt-get upgrade -y
+            string installApacheScript = @"
+//sudo apt-get update -y
+//sudo apt-get install git make -y
+//sudo apt-get install apache2 -y
+   
+cd /home/pi/
+if [ -d \""/home/pi/webCoRE\"" ]
+then
+echo webCoRE exists, skipping install
+else
+echo git clone webcore
+git clone https://github.com/ajayjohn/webCoRE
+fi
+
+cd webCoRE
+echo checkout patches
+git checkout hubitat-patches
+cd dashboard
+
+sudo rm /var/www/webcore
+sudo ln -s `pwd` /var/www/webcore
 
 
-                     "echo \"<Directory /var/www/webcore/>\" >> apache2.conf",
-                     "echo \"Options Indexes FollowSymLinks\" >> apache2.conf",
-                     "echo \"AllowOverride None\" >> apache2.conf",
-                     "echo \"Require all granted\" >> apache2.conf",
-                     "echo \"</Directory>\" >> apache2.conf",
 
-                     "sudo service apache2 reload",
+cd ~/
+cd /tmp
+mv -f 000-default.conf /etc/apache2/sites-available/
+mv -f apache2.conf /etc/apache2/
 
+sudo chown -R www-data:www-data /etc/apache2/sites-available/
+sudo chmod 775 '/etc/apache2/sites-available/'
 
-                     "exit 1"
-                    //"sudo nano /etc/apache2/sites-available/000-default.conf"
+sudo find /var/www -type d -exec chmod 2750 {} \+
+sudo find /var/www -type f -exec chmod 640 {} \+
+     
 
-                    //
-                    //
-                };
+echo exit
+";
+
 
             //var ssh = new SshClient("192.168.0.214", "pi", "raspberry");
 
             //string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"install-apache.sh");
             string path = Path.Combine("c:/temp/", $@"install-apache.sh");
+            File.WriteAllLines(path, installApacheScript.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray());
 
-            File.WriteAllLines(path, installApache2);
+            string pathContinue = Path.Combine("c:/temp/", $@"install-apache-cont.sh");
+            File.WriteAllLines(pathContinue, continueInstall);
 
             //RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), installApache2);
             //RunSSHCommands(new SshClient("192.168.0.214", "pi", "raspberry"), installApache2.ToArray());
@@ -207,23 +248,32 @@ print(resp)";
                     UserExecute = true,
                     UserWrite = true,
                     OtherWrite = true,
-                    OtherRead = true
+                    OtherRead = true,
+                    GroupRead = true,
+                    GroupWrite = true,
+                    GroupExecute = true
                 };
 
-                string pathConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"000-default.conf");
+                string pathSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"000-default.conf");
+                string pathApacheConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"apache2.conf");
 
                 //RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "echo here", "cd /etc/apache2/sites-available/", "sudo chown pi: 000-default.conf" });
 
-           
 
                 //var destIP = sourceIP;// "192.168.1.149";
                 session.PutFileToDirectory(path, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                session.PutFileToDirectory(pathContinue, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                session.PutFileToDirectory(pathSiteConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 //session.MoveFile(path, "/usr/local/install-apache.sh");
 
                 RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "sudo /tmp/install-apache.sh" });
 
                 //session.RemoveFile("/etc/apache2/sites-available/000-default.conf");
-                session.PutFileToDirectory(pathConf, "/etc/apache2/sites-available/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+
+                //session.PutFileToDirectory(pathSiteConf, "/etc/apache2/sites-available/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                //session.PutFileToDirectory(pathApacheConf, "/etc/apache2/");//, true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, TransferMode = TransferMode.Automatic });
+                
+                RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "sudo /tmp/install-apache-cont.sh" });
 
 
                 //ExecuteSSHCommands(destIP, new string[] { killEmuStation });
@@ -777,29 +827,52 @@ print(resp)";
             }
         }
 
+        protected static bool IsScriptRunning = false;
+
         protected static void RunSSHCommandStream(SshClient vclient, List<string> commands)
         {
             using (vclient)// var vclient = new SshClient("host", "username", "password"))
             {
                 vclient.Connect();
-                using (ShellStream shell = vclient.CreateShellStream("dumb", 80, 24, 800, 600, 1024))
-                {
-                    //shell.DataReceived += Shell_DataReceived;
 
+                IsScriptRunning = true;
+
+                var terminalMode = new Dictionary<TerminalModes, uint>();
+                terminalMode.Add(TerminalModes.ECHO, 53);
+
+                using (ShellStream shell = vclient.CreateShellStream("dumb", 80, 24, 800, 600, 1024, terminalMode))
+                {
+                    shell.DataReceived += Shell_DataReceived;
+                    shell.ErrorOccurred += Shell_ErrorOccurred;
+                    
                     commands.ForEach(command => 
                     {
+                        if (command == "exit")
+                        {
+                            shell.Close();
+                            return;
+                        }
+
+                        Console.WriteLine($"");
+                        Console.WriteLine($"---- SendCommand:{command}");
+                        Console.WriteLine($"");
+
                         var result = SendCommand(command, shell);
                         //Console.WriteLine(result);
                     });
 
                     string line;
-                    while ((line = shell.ReadLine(TimeSpan.FromMinutes(30))) != null)
-                    {
-                        Console.WriteLine(line);
-                        shell.Flush();
-                        // if a termination pattern is known, check it here and break to exit immediately
-                    }
+                    //while ((line = shell.ReadLine(TimeSpan.FromMinutes(30))) != null)
+                    //{
+                    //    Console.WriteLine(line);
+                    //    shell.Flush();
 
+                    //    // if a termination pattern is known, check it here and break to exit immediately
+                    //}
+
+                    //while (vclient.IsConnected) { shell.Flush(); }
+                    while (IsScriptRunning) { shell.Flush(); }
+                    
                     //Console.WriteLine(SendCommand("comand 1", shell));
 
                     shell.Close();
@@ -808,9 +881,28 @@ print(resp)";
             }
         }
 
+        private static void Shell_ErrorOccurred(object sender, Renci.SshNet.Common.ExceptionEventArgs e)
+        {
+            Console.WriteLine("Shell_ErrorOccurred >>" + e.Exception.Message);
+        }
+
         private static void Shell_DataReceived(object sender, Renci.SshNet.Common.ShellDataEventArgs e)
         {
-            Console.WriteLine(">>" + e.Line);
+            var text = ASCIIEncoding.ASCII.GetString(e.Data);
+            if (text != null && text.Length > 0)
+            {
+                if (text.Contains("\r            \r"))
+                {
+                    var test = true;
+                }
+                Console.WriteLine(text);
+                if (text.Contains("exit"))
+                {
+                    IsScriptRunning = false;
+                    //var client = sender as ShellStream;
+                    //client.Close();
+                }
+            }
         }
 
         protected static void RunSSHCommands(SshClient client, string[] commands)
