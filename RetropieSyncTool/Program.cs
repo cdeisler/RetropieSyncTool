@@ -169,17 +169,32 @@ namespace RetropieSyncTool
 
             //sudo apt-get upgrade -y
             string installApacheScript = @"
-//sudo apt-get update -y
-//sudo apt-get install git make -y
-//sudo apt-get install apache2 -y
+#sudo apt-get update -y
+#sudo apt-get install git make -y
+#sudo apt-get install apache2 -y
    
 cd /home/pi/
+
+sudo chown -R pi /tmp/install-apache.sh
+sudo chown -R pi /tmp/dhcpcd.conf
+
+echo  ""evaluating webCoRE install ""
+
 if [ -d \""/home/pi/webCoRE\"" ]
 then
-echo webCoRE exists, skipping install
+echo  ""webCoRE exists, removing existing install first""
+sudo rm -f -r /home/pi/webCoRE
+else
+echo  ""webCoRE folder missing""
+fi
+
+if [ -d \""/home/pi/webCoRE\"" ]
+then
+echo ### webCoRE exists, skipping install ### 
 else
 echo git clone webcore
-git clone https://github.com/ajayjohn/webCoRE
+#git clone https://github.com/ajayjohn/webCoRE
+git clone https://github.com/jp0550/webCoRE
 fi
 
 cd webCoRE
@@ -202,6 +217,7 @@ sed -i '1s/^\xEF\xBB\xBF//' apache2.conf
 
 sudo chown -R www-data /etc/apache2/sites-available/
 sudo chmod 775 '/etc/apache2/sites-available/'
+sudo chown www-data /etc/apache2/apache2.conf
 
 sudo find /var/www -type d -exec chmod 2750 {} \+
 sudo find /var/www -type f -exec chmod 640 {} \+
@@ -222,6 +238,7 @@ echo exit
 
             string pathContinue = Path.Combine("c:/temp/", $@"install-apache-cont.sh");
             File.WriteAllLines(pathContinue, continueInstall);
+
 
             //RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), installApache2);
             //RunSSHCommands(new SshClient("192.168.0.214", "pi", "raspberry"), installApache2.ToArray());
@@ -262,7 +279,7 @@ echo exit
 
                 string pathSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"000-default.conf");
                 string pathApacheConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"apache2.conf");
-
+                string pathDhcpcdConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"dhcpcd.conf");
                 //RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "echo here", "cd /etc/apache2/sites-available/", "sudo chown pi: 000-default.conf" });
 
 
@@ -270,6 +287,9 @@ echo exit
                 session.PutFileToDirectory(path, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathContinue, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathSiteConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                session.PutFileToDirectory(pathApacheConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                session.PutFileToDirectory(pathDhcpcdConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+
                 //session.MoveFile(path, "/usr/local/install-apache.sh");
 
                 RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "sudo /tmp/install-apache.sh" });
