@@ -1,4 +1,4 @@
-﻿using Renci.SshNet;
+using Renci.SshNet;
 using Renci.SshNet.Common;
 using System;
 using System.Collections.Generic;
@@ -140,10 +140,12 @@ namespace RetropieSyncTool
             {
                 "echo modify default.conf",
 
-                "cd /etc/apache2/sites-available/", "sudo chown -R www-data 000-default.conf",
+                "cd /etc/apache2/sites-available/",
+                "sudo chown -R www-data:www-data 000-default.conf",
                 
                 //"sudo chown -R www-data /var/www",
                 //"sudo chgrp -R www-data /var/www",
+                "a2ensite 004-pihole.conf",
 
                 "echo a2enmod",
                 "sudo a2enmod rewrite",
@@ -152,9 +154,9 @@ namespace RetropieSyncTool
                 "sudo chmod -R /var/www/webcore 400",
                 @"find /var/www/webcore -type d -exec chmod -R u+x {} \;",
 
-                "sudo chown www–data /etc/apache2/apache2.conf",
-                "sudo chown -R www–data /etc/apache2/sites-available/",
-                "sudo chown www–data /etc/apache2/apache2.conf",
+                "sudo chown www-data:www-data /etc/apache2/apache2.conf",
+                "sudo chown -R www-data:www-data /etc/apache2/sites-available/",
+                "sudo chown www-data:www-data /etc/apache2/apache2.conf",
                 "cd /etc/apache2/",
 
                 //"echo \"<Directory /var/www/webcore/>\" >> apache2.conf",
@@ -177,6 +179,7 @@ cd /home/pi/
 
 sudo chown -R pi /tmp/install-apache.sh
 sudo chown -R pi /tmp/dhcpcd.conf
+sudo chown -R pi /tmp/004-pihole.conf
 
 echo  ""evaluating webCoRE install ""
 
@@ -190,11 +193,12 @@ fi
 
 if [ -d \""/home/pi/webCoRE\"" ]
 then
-echo ### webCoRE exists, skipping install ### 
+echo ""webCoRE exists, skipping install"" 
 else
 echo git clone webcore
 #git clone https://github.com/ajayjohn/webCoRE
-git clone https://github.com/jp0550/webCoRE
+#git clone https://github.com/jp0550/webCoRE
+git clone https://github.com/imnotbob/webCoRE
 fi
 
 cd webCoRE
@@ -210,7 +214,9 @@ sudo ln -s `pwd` /var/www/webcore
 cd ~/
 cd /tmp
 mv -f 000-default.conf /etc/apache2/sites-available/
+mv -f 004-pihole.conf /etc/apache2/sites-available/
 mv -f apache2.conf /etc/apache2/
+
 
 cd /etc/apache2/
 sed -i '1s/^\xEF\xBB\xBF//' apache2.conf
@@ -278,6 +284,7 @@ echo exit
                 };
 
                 string pathSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"000-default.conf");
+               string pathPiHoleSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"004-pihole.conf"); 
                 string pathApacheConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"apache2.conf");
                 string pathDhcpcdConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"dhcpcd.conf");
                 //RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "echo here", "cd /etc/apache2/sites-available/", "sudo chown pi: 000-default.conf" });
@@ -289,6 +296,9 @@ echo exit
                 session.PutFileToDirectory(pathSiteConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathApacheConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathDhcpcdConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                session.PutFileToDirectory(pathPiHoleSiteConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+
+                
 
                 //session.MoveFile(path, "/usr/local/install-apache.sh");
 
