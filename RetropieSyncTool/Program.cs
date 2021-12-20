@@ -157,6 +157,8 @@ namespace RetropieSyncTool
                 "sudo chown www-data:www-data /etc/apache2/apache2.conf",
                 "sudo chown -R www-data:www-data /etc/apache2/sites-available/",
                 "sudo chown www-data:www-data /etc/apache2/apache2.conf",
+                "sudo chown www-data:www-data /etc/pihole/setupVars.conf",
+                
                 "cd /etc/apache2/",
 
                 //"echo \"<Directory /var/www/webcore/>\" >> apache2.conf",
@@ -180,8 +182,46 @@ cd /home/pi/
 sudo chown -R pi /tmp/install-apache.sh
 sudo chown -R pi /tmp/dhcpcd.conf
 sudo chown -R pi /tmp/004-pihole.conf
+sudo chown -R pi /tmp/setupVars.conf
+sudo chown -R pi /tmp/wpa_supplicant.conf
+
+cd /
+sudo -u root mkdir /etc/pihole/
+
+cd /tmp/
+mv -f wpa_supplicant.conf ~/
+mv -f ssh ~/
+mv -f setupVars.conf /etc/pihole/
+
+cd /tmp/
+mv -f setupVars.conf /etc/pihole/
+
+echo ""running pihole install""
+cd /home/pi/
+
+if [ -d \""/home/pi/Pi-hole\"" ]
+then
+echo  ""Pi-hole exists, removing existing install first""
+sudo rm -f -r /home/pi/Pi-hole
+else
+echo  ""Pi-hole folder missing""
+fi
+
+if [ -d \""/home/pi/Pi-hole\"" ]
+then
+echo ""Pi-hole exists, skipping install"" 
+else
+echo git clone pihole
+git clone --depth 1 https://github.com/pi-hole/pi-hole.git Pi-hole
+cd ""Pi-hole/automated install/""
+
+sudo bash basic-install.sh --disable-install-webserver --unattended
+fi
+
+echo  ""pihole now installed""
 
 echo  ""evaluating webCoRE install ""
+cd /home/pi/
 
 if [ -d \""/home/pi/webCoRE\"" ]
 then
@@ -201,6 +241,7 @@ echo git clone webcore
 git clone https://github.com/imnotbob/webCoRE
 fi
 
+
 cd webCoRE
 echo checkout patches
 git checkout hubitat-patches
@@ -208,8 +249,6 @@ cd dashboard
 
 sudo rm /var/www/webcore
 sudo ln -s `pwd` /var/www/webcore
-
-
 
 cd ~/
 cd /tmp
@@ -230,10 +269,22 @@ sudo find /var/www -type f -exec chmod 640 {} \+
 
 sudo chown -R www-data /var/www
 sudo chgrp -R www-data /var/www
-     
+
+echo install php
+sudo usermod -a -G pihole www-data
+sudo apt install php libapache2-mod-php
+sudo service apache2 restart
 
 echo exit
 ";
+
+            string pathSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"000-default.conf");
+            string pathPiHoleSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"004-pihole.conf");
+            string pathApacheConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"apache2.conf");
+            string pathDhcpcdConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"dhcpcd.conf");
+            string pathSetupVarsConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"setupVars.conf");
+            string pathWpaSupplicantConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"wpa_supplicant.conf");
+            string pathSSHFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"ssh");
 
 
             //var ssh = new SshClient("192.168.0.214", "pi", "raspberry");
@@ -262,6 +313,24 @@ echo exit
             //SyncArtwork(sourceIP);
             //}
 
+
+            //var destIP = sourceIP;// "192.168.1.149";
+            bool isFirstRun = false;
+            if (isFirstRun)
+            {
+                //session.PutFileToDirectory(pathWpaSupplicantConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                //session.PutFileToDirectory(pathSSHFile, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                var sdcard = new DirectoryInfo(@"E:\");
+                if (sdcard.Exists)
+                {
+                    File.Copy(pathSSHFile, $@"E:\ssh");
+                    File.Copy(pathWpaSupplicantConf, $@"E:\wpa_supplicant.conf");
+                    Console.WriteLine("Press any key to exit.");
+                    Console.ReadLine();
+                    return;
+                }
+            }
+
             using (var session = new WinSCP.Session())
             {
                 session.Open(new SessionOptions
@@ -283,22 +352,20 @@ echo exit
                     GroupExecute = true
                 };
 
-                string pathSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"000-default.conf");
-               string pathPiHoleSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"004-pihole.conf"); 
-                string pathApacheConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"apache2.conf");
-                string pathDhcpcdConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"dhcpcd.conf");
+
                 //RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "echo here", "cd /etc/apache2/sites-available/", "sudo chown pi: 000-default.conf" });
 
 
-                //var destIP = sourceIP;// "192.168.1.149";
+
                 session.PutFileToDirectory(path, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathContinue, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathSiteConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathApacheConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+
                 session.PutFileToDirectory(pathDhcpcdConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathPiHoleSiteConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                session.PutFileToDirectory(pathSetupVarsConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
 
-                
 
                 //session.MoveFile(path, "/usr/local/install-apache.sh");
 
@@ -308,7 +375,7 @@ echo exit
 
                 //session.PutFileToDirectory(pathSiteConf, "/etc/apache2/sites-available/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 //session.PutFileToDirectory(pathApacheConf, "/etc/apache2/");//, true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, TransferMode = TransferMode.Automatic });
-                
+
                 RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "sudo /tmp/install-apache-cont.sh" });
 
 
