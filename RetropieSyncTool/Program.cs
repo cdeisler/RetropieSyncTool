@@ -275,8 +275,29 @@ sudo usermod -a -G pihole www-data
 sudo apt install php libapache2-mod-php
 sudo service apache2 restart
 
+
+echo ""adding hubitat backups chron""
+
+cd /home/pi/
+sudo mkdir hubitat
+sudo chown pi hubitat
+cd hubitat
+sudo mkdir backups
+sudo chown pi backups
+
+if [ -e \""/etc/cron.daily/backup-hubitat\"" ]
+then
+echo  ""backup-hubitat exists, erasing existing script first""
+sudo truncate -s 0 /etc/cron.daily/backup-hubitat
+fi
+
+echo $'cd /home/pi/hubitat/backups/\nwget --output-document=`date +"" % Y -% m -% d""`.lzf http://192.168.0.129/hub/backupDB?fileName=latest' | sudo tee -a /etc/cron.daily/backup-hubitat
+
 echo exit
 ";
+
+
+
 
             string pathSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"000-default.conf");
             string pathPiHoleSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"004-pihole.conf");
