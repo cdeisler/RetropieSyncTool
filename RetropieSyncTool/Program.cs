@@ -132,7 +132,7 @@ namespace RetropieSyncTool
 
             //using (var session = new WinSCP.Session())
             //{
-            var sourceIP = "192.168.0.214";
+            var sourceIP = "192.168.0.117";// 214";
 
               
 
@@ -296,9 +296,6 @@ echo $'cd /home/pi/hubitat/backups/\nwget --output-document=`date +"" % Y -% m -
 echo exit
 ";
 
-
-
-
             string pathSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"000-default.conf");
             string pathPiHoleSiteConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"004-pihole.conf");
             string pathApacheConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"apache2.conf");
@@ -352,6 +349,7 @@ echo exit
                 }
             }
 
+
             using (var session = new WinSCP.Session())
             {
                 session.Open(new SessionOptions
@@ -377,13 +375,22 @@ echo exit
                 //RunSSHCommandStream(new SshClient("192.168.0.214", "pi", "raspberry"), new List<string>() { "echo here", "cd /etc/apache2/sites-available/", "sudo chown pi: 000-default.conf" });
 
 
+                bool isSecondRun = true;
+                if (isSecondRun)
+                {
+                    session.PutFileToDirectory(pathDhcpcdConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                    ExecuteSSHCommands(sourceIP, new string[] { "sudo chown pi:root /tmp/dhcpcd.conf", "sudo chown pi:root /etc/dhcpcd.conf", "cd /tmp", "mv -f dhcpcd.conf /etc/", "sudo chown root:root /etc/dhcpcd.conf" });
+                    Console.WriteLine("Press any key to exit.");
+                    Console.ReadLine();
+                    return;
+                }
 
                 session.PutFileToDirectory(path, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathContinue, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathSiteConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathApacheConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
 
-                session.PutFileToDirectory(pathDhcpcdConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                
                 session.PutFileToDirectory(pathPiHoleSiteConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathSetupVarsConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
 
@@ -1607,7 +1614,7 @@ echo exit
         /**********************************************************************/
         /*********************** DAT File Processing **************************/
         /**********************************************************************/
-
+        #region Region - DAT Files
         public static XmlDocument LoadDatFile(string datFile)
         {
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatFiles", $@"{datFile}");
@@ -1805,7 +1812,7 @@ echo exit
             return "";
 
         }
-
+        #endregion
 
         /**********************************************************************/
         /************** Gamelist.xml ******************************************/
