@@ -379,7 +379,14 @@ echo exit
                 if (isSecondRun)
                 {
                     session.PutFileToDirectory(pathDhcpcdConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
-                    ExecuteSSHCommands(sourceIP, new string[] { "sudo chown pi:root /tmp/dhcpcd.conf", "sudo chown pi:root /etc/dhcpcd.conf", "cd /tmp", "mv -f dhcpcd.conf /etc/", "sudo chown root:root /etc/dhcpcd.conf" });
+                    ExecuteSSHCommands(sourceIP, new string[] { "sudo chown pi:root /tmp/dhcpcd.conf",
+                                                                "sudo chown pi:root /etc/dhcpcd.conf",
+                                                                "cd /tmp",
+                                                                "sudo mv -f dhcpcd.conf /etc/",
+                                                                "sudo chown root:root /etc/dhcpcd.conf",
+                                                                "reboot"
+                                                            });
+
                     Console.WriteLine("Press any key to exit.");
                     Console.ReadLine();
                     return;
