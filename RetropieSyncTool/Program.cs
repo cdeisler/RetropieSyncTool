@@ -309,7 +309,7 @@ echo exit
 
             //string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"install-apache.sh");
             string path = Path.Combine("c:/temp/", $@"install-apache.sh");
-            File.WriteAllLines(path, installApacheScript.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray());
+            File.WriteAllLines(path, installApacheScript.Split(new string[] { Environment.NewLine }, StringSplitOptions.None));//.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray());
 
             string pathContinue = Path.Combine("c:/temp/", $@"install-apache-cont.sh");
             File.WriteAllLines(pathContinue, continueInstall);
