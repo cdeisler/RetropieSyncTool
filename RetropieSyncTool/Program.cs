@@ -378,14 +378,17 @@ echo exit
                 bool isSecondRun = true;
                 if (isSecondRun)
                 {
-                    session.PutFileToDirectory(pathDhcpcdConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
-                    ExecuteSSHCommands(sourceIP, new string[] { "sudo chown pi:root /tmp/dhcpcd.conf",
+                    var commandsDhcp = new string[] { "sudo chown pi:root /tmp/dhcpcd.conf",
                                                                 "sudo chown pi:root /etc/dhcpcd.conf",
                                                                 "cd /tmp",
                                                                 "sudo mv -f dhcpcd.conf /etc/",
                                                                 "sudo chown root:root /etc/dhcpcd.conf",
-                                                                "reboot"
-                                                            });
+                                                                "sudo reboot"
+                                                            };
+
+                    session.PutFileToDirectory(pathDhcpcdConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
+                    
+                    ExecuteSSHCommands(sourceIP, commandsDhcp);
 
                     Console.WriteLine("Press any key to exit.");
                     Console.ReadLine();
@@ -396,7 +399,6 @@ echo exit
                 session.PutFileToDirectory(pathContinue, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathSiteConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathApacheConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
-
                 
                 session.PutFileToDirectory(pathPiHoleSiteConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathSetupVarsConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
