@@ -132,9 +132,7 @@ namespace RetropieSyncTool
 
             //using (var session = new WinSCP.Session())
             //{
-            var sourceIP = "192.168.0.117";// 214";
-
-              
+            var sourceIP = "192.168.0.141";// .137";// 214";
 
             List<string> continueInstall = new List<string>()
             {
@@ -291,7 +289,7 @@ echo  ""backup-hubitat exists, erasing existing script first""
 sudo truncate -s 0 /etc/cron.daily/backup-hubitat
 fi
 
-echo $'cd /home/pi/hubitat/backups/\nwget --output-document=`date +"" % Y -% m -% d""`.lzf http://192.168.0.129/hub/backupDB?fileName=latest' | sudo tee -a /etc/cron.daily/backup-hubitat
+#echo $'cd /home/pi/hubitat/backups/\nwget --output-document=`date +"" % Y -% m -% d""`.lzf http://192.168.0.129/hub/backupDB?fileName=latest' | sudo tee -a /etc/cron.daily/backup-hubitat
 
 echo exit
 ";
@@ -303,7 +301,7 @@ echo exit
             string pathSetupVarsConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"setupVars.conf");
             string pathWpaSupplicantConf = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"wpa_supplicant.conf");
             string pathSSHFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"ssh");
-
+            string pathInterfacesFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $@"interfaces");
 
             //var ssh = new SshClient("192.168.0.214", "pi", "raspberry");
 
@@ -338,11 +336,11 @@ echo exit
             {
                 //session.PutFileToDirectory(pathWpaSupplicantConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 //session.PutFileToDirectory(pathSSHFile, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
-                var sdcard = new DirectoryInfo(@"E:\");
+                var sdcard = new DirectoryInfo(@"F:\");
                 if (sdcard.Exists)
                 {
-                    File.Copy(pathSSHFile, $@"E:\ssh");
-                    File.Copy(pathWpaSupplicantConf, $@"E:\wpa_supplicant.conf");
+                    File.Copy(pathSSHFile, $@"F:\ssh");
+                    File.Copy(pathWpaSupplicantConf, $@"F:\wpa_supplicant.conf");
                     Console.WriteLine("Press any key to exit.");
                     Console.ReadLine();
                     return;
@@ -378,17 +376,37 @@ echo exit
                 bool isSecondRun = true;
                 if (isSecondRun)
                 {
-                    var commandsDhcp = new string[] { "sudo chown pi:root /tmp/dhcpcd.conf",
-                                                                "sudo chown pi:root /etc/dhcpcd.conf",
-                                                                "cd /tmp",
-                                                                "sudo mv -f dhcpcd.conf /etc/",
-                                                                "sudo chown root:root /etc/dhcpcd.conf",
+
+                    var commandsDhcp = @"
+sudo chown pi:root /tmp/dhcpcd.conf
+sudo chown pi:root /etc/dhcpcd.conf
+
+sudo chown pi:root /tmp/interfaces
+sudo chown pi:root /etc/network/interfaces
+
+cd /tmp
+sudo mv -f interfaces /etc/network/
+sudo chown root:root /etc/network/interfaces
+
+sudo mv -f dhcpcd.conf /etc/
+sudo chown root:root /etc/dhcpcd.conf
+
+
+#sudo reboot
+";
+
+                    var commandsRemoveCronJob = new string[] { "sudo chown pi:root /etc/cron.daily/backup-hubitat",
+                                                                "sudo rm -f -r /etc/cron.daily/backup-hubitat",
                                                                 "sudo reboot"
                                                             };
-
-                    session.PutFileToDirectory(pathDhcpcdConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                     
-                    ExecuteSSHCommands(sourceIP, commandsDhcp);
+
+                    session.PutFileToDirectory(pathDhcpcdConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, TransferMode = TransferMode.Automatic });
+                    session.PutFileToDirectory(pathInterfacesFile, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, TransferMode = TransferMode.Automatic });
+
+                    string[] splitted = commandsDhcp.Split(new string[] { System.Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+
+                    ExecuteSSHCommands(sourceIP, splitted);
 
                     Console.WriteLine("Press any key to exit.");
                     Console.ReadLine();
