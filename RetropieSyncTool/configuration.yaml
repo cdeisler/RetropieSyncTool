@@ -1,0 +1,30 @@
+# Configure a default setup of Home Assistant (frontend, api, etc)
+#default_config:
+
+# Individual options represented by default_config
+automation: !include automations.yaml
+automation manual: !include_dir_merge_list automations
+#cloud:
+config:
+frontend:
+#history:
+input_boolean:
+input_datetime:
+input_number:
+input_select:
+input_text:
+#logbook:
+#map:
+mobile_app:
+person:
+script: !include scripts.yaml
+#ssdp:
+sun:
+system_health:
+updater:
+#zeroconf:
+zone:
+zwave:
+  usb_path: /dev/ttyUSB0
+  device_config: !include zwave_device_config.yaml
+  network_key: 0x4E, 0xA4, 0xBC, 0xB4, 0x05, 0x4D, 0x51, 0x7C, 0xAD, 0x07, 0xCD, 0xDB, 0x14, 0x65, 0xAA, 0x1F
