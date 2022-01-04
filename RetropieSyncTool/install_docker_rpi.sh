@@ -95,6 +95,8 @@ sudo docker run -d \
     -p 80:80 \
     -e TZ="America/New_York" \
     --dns=192.168.0.1 --dns=1.1.1.1 \
+	# -v "${PIHOLE_BASE}/etc-pihole:/etc/pihole" \
+    # -v "${PIHOLE_BASE}/etc-dnsmasq.d:/etc/dnsmasq.d" \
     --restart=unless-stopped \
     --hostname pi.hole \
     -e VIRTUAL_HOST="pi.hole" \
