@@ -132,7 +132,7 @@ namespace RetropieSyncTool
 
             //using (var session = new WinSCP.Session())
             //{
-            var sourceIP = "192.168.0.141";// .137";// 214";
+            var sourceIP = "192.168.0.214";// .137";// 214";
 
             List<string> continueInstall = new List<string>()
             {
@@ -412,6 +412,10 @@ sudo chown root:root /etc/dhcpcd.conf
                     Console.ReadLine();
                     return;
                 }
+
+
+                SynchronizeClientToServerDirectories(sourceIP, session, $@"D:\MyWork\HomeAssistantBackup\", "/home/pi/homeassistant/", false);
+
 
                 session.PutFileToDirectory(path, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 session.PutFileToDirectory(pathContinue, "/tmp/", true, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });

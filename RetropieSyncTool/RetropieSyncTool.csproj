@@ -93,6 +93,7 @@
     <Content Include="wpa_supplicant.conf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="pihole_install.sh" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="DatFiles\mame2003-lr-no-clones-no-neogeo.xml">
