@@ -25,6 +25,7 @@ namespace RetropieSyncTool
 
         protected static string killEmuStation = "sudo ps -ef | awk '/emulation/ {print $2}' | xargs sudo kill -9 2092";
         protected static string killMame = "sudo ps -ef | awk '/mame/ {print $2}' | xargs sudo kill -9 2092";
+        protected static string killFBA = "sudo ps -ef | awk '/lr-fbneo/ {print $2}' | xargs sudo kill -9 2092";
         protected static string shutDown = "sudo shutdown -h now";
         protected static string reboot = "sudo reboot";
         protected static string emulationstation = "sudo emulationstation";
@@ -32,7 +33,6 @@ namespace RetropieSyncTool
         protected static string aptgetupdate = "sudo apt-get update";
         protected static string installpythonpip = "sudo apt install python3-pip --fix-missing";
         // sudo pip3 install paramiko
-
 
 
 
@@ -106,7 +106,8 @@ namespace RetropieSyncTool
 
             //RunRomTests();
             //RunRandomRom("192.168.1.117");
-
+            RunRandomRom("192.168.0.136");
+            return;
             //RunRom("192.168.1.149", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
 
             //ExecuteSSHCommands("192.168.1.148", new string[] {  command });
@@ -599,7 +600,7 @@ sudo chown root:root /etc/dhcpcd.conf
             if (parent == "mame2003") parent = "mame-libretro";
 
             //sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2000/mame2000_libretro.so --config /opt/retropie/configs/mame-mame4all/retroarch.cfg /home/pi/RetroPie/roms/arcade/hbarrel.zip
-            var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg &";
+            var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg";
             //var command = $@"sudo {RUNCOMMAND} 0 _SYS_ {parent} {rfi}";  //export DISPLAY=:0
 
             //            test = @"client = SSHClient()
@@ -938,7 +939,7 @@ sudo chown root:root /etc/dhcpcd.conf
                         if (fileInfos.Count > 0)
                         {
                             Console.WriteLine($"Writing {fileInfos.Count} files from path: {di.FullName}");
-                            romsByPath.AddRange(fileInfos);
+                            romsByPath.AddRange(fileInfos.Where(fi => fi.Name != "neogeo.zip"));
                         }
                         else
                         {
@@ -967,7 +968,7 @@ sudo chown root:root /etc/dhcpcd.conf
             string command = GetRunRomCommand(randomRom.FullName);
             //ddragon3.zip
             //string command = GetRunMameCommand("ddragon3");// randomRom.Name.Replace(".zip", "1943.zip"));
-            ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, command }); //killEmuStation, killMame,  
+            ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, killFBA, command }); //killEmuStation, killMame,  
             //RunSSHCommands(new SshClient(ipClient, "pi", "raspberry"), new string[] { killEmuStation, killMame, command });
         }
 

@@ -29,14 +29,24 @@ docker rm zwave-js
 sudo docker stop home-assistant
 sudo docker rm home-assistant
 
+# docker run -d \
+  # --name homeassistant \
+  # --privileged \
+  # --restart=unless-stopped \
+  # -e TZ=America/New_York \
+  # -v /home/pi/homeassistant/configuration.yaml \
+  # --network=host \
+  # ghcr.io/home-assistant/home-assistant:stable
+  
 docker run -d \
   --name homeassistant \
   --privileged \
   --restart=unless-stopped \
   -e TZ=America/New_York \
-  -v /home/pi/homeassistant/configuration.yaml \
+  -v /home/pi/homeassistant/config:/config \
   --network=host \
-  ghcr.io/home-assistant/home-assistant:stable
+  --device=/PATH_TO_YOUR_USB_STICK
+  ghcr.io/home-assistant/home-assistant:stable  
   
 echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
 echo "enable_uart=1" | sudo tee -a /boot/config.txt
@@ -128,6 +138,7 @@ sudo -i
 mkdir -p /home/pi/homeassistant/backups/
 rsync -abv /var/lib/docker/containers/57e62cd764b0dfb1e269b666739c610db9a2055d6747508bdbd6db5ebccf85bd/ /home/pi/homeassistant/backups/
 
+rsync -a --recursive --progress --verbose /var/lib/docker/containers/57e62cd764b0dfb1e269b666739c610db9a2055d6747508bdbd6db5ebccf85bd/ /mnt/fileshare/
 
 # sudo docker container ls -a
 /dev/mmcblk0p1: UUID="C839-E506"
@@ -140,9 +151,6 @@ UUID="CE83-9F6E" /mnt/usb1 "vfat" defaults,auto,users,rw,nofail,noatime 0 0
 #sudo fdisk -l
 
 sudo mount -t ntfs-3g /dev/sdb2 /media/external
-
-sudo mount -t vfat /dev/sda4 /media/external -o uid=1000,gid=1000,utf8,dmask=027,fmask=137
-/dev/sda4: LABEL="HP_TOOLS" UUID="CE83-9F6E" BLOCK_SIZE="512" TYPE="vfat" PARTUUID="82337274-04"
 
 
 sudo mkdir -p /etc/samba/auto/ && 
@@ -169,18 +177,32 @@ cd /etc/samba/
 curl -o smb.conf https://raw.githubusercontent.com/zentyal/samba/master/examples/smb.conf.default
 
 
-echo -e "include = /etc/samba/auto/usb1.conf" | tee -a /etc/samba/smb.conf
-echo -e "include = /etc/samba/auto/usb2.conf" | tee -a /etc/samba/smb.conf
-echo -e "include = /etc/samba/auto/usb3.conf" | tee -a /etc/samba/smb.conf
-echo -e "include = /etc/samba/auto/usb4.conf" | tee -a /etc/samba/smb.conf
-echo -e "include = /etc/samba/auto/usb5.conf" | tee -a /etc/samba/smb.conf
-echo -e "include = /etc/samba/auto/usb6.conf" | tee -a /etc/samba/smb.conf
-echo -e "include = /etc/samba/auto/usb7.conf" | tee -a /etc/samba/smb.conf
+sudo mkdir -p /mnt/fileshare
+sudo chown -R pi  /mnt/fileshare
+sudo chown -R pi:pi /home/pi/hass-intermediate-sync
+sudo chown -R pi /home/pi/hass-intermediate-sync
+ 
+[hass-sync]
+comment = Contents are read/write by all.
+path = /home/pi/hass-intermediate-sync
+read only = no
+guest ok = yes
+create mask = 0666
+force create mode = 0666
+directory mask = 0777
+force directory mode = 0777
 
-include = /etc/samba/auto/usb1.conf
-include = /etc/samba/auto/usb2.conf
-include = /etc/samba/auto/usb3.conf
-include = /etc/samba/auto/usb4.conf
-include = /etc/samba/auto/usb5.conf
-include = /etc/samba/auto/usb6.conf
-include = /etc/samba/auto/usb7.conf
+sudo service smbd restart
+# mount on windows:  \\raspberrypi\hass-sync\
+
+mount.cifs //raspberrypi/hass-sync /mnt/fileshare/
+mount.cifs //192.168.0.220/hass-sync /mnt/fileshare/ -o user=pi
+
+rsync -a --recursive --progress --verbose --delete /var/lib/docker/overlay2/16f9ee054b248c68a0891998c56afceb562929a7b9ca061718f1ded690f6af0f/diff/config/ /mnt/fileshare/
+
+sudo docker stop homeassistant
+docker export home-assistant > /tmp/homeassistant.tar
+sudo docker start $(docker ps -a -q --filter "status=exited")
+sudo docker container ls -a
+
+
