@@ -94,6 +94,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="pihole_install.sh" />
+    <None Include="runRom.sh" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="DatFiles\mame2003-lr-no-clones-no-neogeo.xml">

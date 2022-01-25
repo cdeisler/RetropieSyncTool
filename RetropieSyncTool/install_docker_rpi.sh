@@ -1,15 +1,16 @@
 #https://docs.docker.com/engine/install/debian/#install-using-the-repository
 
-sudo systemctl enable docker.service
-sudo systemctl enable containerd.service
-
-
 sudo apt-get update
 sudo apt-get install ca-certificates curl gnupg lsb-release
 curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io
+
+
+#https://docs.docker.com/engine/install/linux-postinstall/#configure-docker-to-start-on-boot
+sudo systemctl enable docker.service
+sudo systemctl enable containerd.service
 
 
  
@@ -206,3 +207,8 @@ sudo docker start $(docker ps -a -q --filter "status=exited")
 sudo docker container ls -a
 
 
+sudo apt install jq
+ls | jq -R -s -c 'split("\n")[:-1]'
+
+docker build -t getting-started .
+ docker build -t docker-php-retropie-broker .

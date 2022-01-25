@@ -35,7 +35,6 @@ namespace RetropieSyncTool
         // sudo pip3 install paramiko
 
 
-
         #region paramiko test script
 
         protected static string test = @"import paramiko
@@ -106,7 +105,7 @@ namespace RetropieSyncTool
 
             //RunRomTests();
             //RunRandomRom("192.168.1.117");
-            RunRandomRom("192.168.0.136");
+            RunRandomRom("192.168.0.147");
             return;
             //RunRom("192.168.1.149", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
 
@@ -133,7 +132,7 @@ namespace RetropieSyncTool
 
             //using (var session = new WinSCP.Session())
             //{
-            var sourceIP = "192.168.0.214";// .137";// 214";
+            var sourceIP = "192.168.0.147";// .137";// 214";
 
             List<string> continueInstall = new List<string>()
             {
@@ -332,22 +331,22 @@ echo exit
 
 
             //var destIP = sourceIP;// "192.168.1.149";
-            bool isFirstRun = false;
+            bool isFirstRun = false;// true;
             if (isFirstRun)
             {
+                string driveLetter = "E:";
                 //session.PutFileToDirectory(pathWpaSupplicantConf, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
                 //session.PutFileToDirectory(pathSSHFile, "/tmp/", false, new TransferOptions() { OverwriteMode = OverwriteMode.Overwrite, FilePermissions = permissions, TransferMode = TransferMode.Automatic });
-                var sdcard = new DirectoryInfo(@"F:\");
+                var sdcard = new DirectoryInfo($@"{driveLetter}\");
                 if (sdcard.Exists)
                 {
-                    File.Copy(pathSSHFile, $@"F:\ssh");
-                    File.Copy(pathWpaSupplicantConf, $@"F:\wpa_supplicant.conf");
+                    File.Copy(pathSSHFile, $@"{driveLetter}\ssh");
+                    File.Copy(pathWpaSupplicantConf, $@"{driveLetter}\wpa_supplicant.conf");
                     Console.WriteLine("Press any key to exit.");
                     Console.ReadLine();
                     return;
                 }
             }
-
 
             using (var session = new WinSCP.Session())
             {
@@ -585,8 +584,6 @@ sudo chown root:root /etc/dhcpcd.conf
                 }
                 //Console.WriteLine($"Attempting to run {romPath}");
 
-
-
             }
         }
 
@@ -600,8 +597,10 @@ sudo chown root:root /etc/dhcpcd.conf
             if (parent == "mame2003") parent = "mame-libretro";
 
             //sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mame2000/mame2000_libretro.so --config /opt/retropie/configs/mame-mame4all/retroarch.cfg /home/pi/RetroPie/roms/arcade/hbarrel.zip
-            var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg";
+            //var command = $@"sudo /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-{parent}/{parent}_libretro.so --config /opt/retropie/configs/mame-libretro/retroarch.cfg {rfi} --appendconfig /opt/retropie/configs/all/retroarch.cfg";
             //var command = $@"sudo {RUNCOMMAND} 0 _SYS_ {parent} {rfi}";  //export DISPLAY=:0
+
+            var command = $@"nohup /bin/bash /opt/retropie/configs/all/runRom.sh '{rfi}' &";
 
             //            test = @"client = SSHClient()
             //client.connect({}, {}, {})
@@ -968,7 +967,7 @@ sudo chown root:root /etc/dhcpcd.conf
             string command = GetRunRomCommand(randomRom.FullName);
             //ddragon3.zip
             //string command = GetRunMameCommand("ddragon3");// randomRom.Name.Replace(".zip", "1943.zip"));
-            ExecuteSSHCommands(ipClient, new string[] { killEmuStation, killMame, killFBA, command }); //killEmuStation, killMame,  
+            ExecuteSSHCommands(ipClient, new string[] { command }); //killEmuStation, killMame, killFBA, 
             //RunSSHCommands(new SshClient(ipClient, "pi", "raspberry"), new string[] { killEmuStation, killMame, command });
         }
 
