@@ -16,6 +16,8 @@ case $BASE_DIRECTORY in
         EMULATOR_NAME="fbneo";;
     *"mame2003"*)
         EMULATOR_NAME="mame-libretro";;
+    *"arcade"*)
+        EMULATOR_NAME="mame2003";;
     *)
         echo "INVALID FILE";;
 esac

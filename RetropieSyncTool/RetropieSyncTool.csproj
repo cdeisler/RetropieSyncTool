@@ -94,6 +94,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="pihole_install.sh" />
+    <None Include="retropie-get-server-random-rom.sh" />
     <None Include="runRom.sh" />
   </ItemGroup>
   <ItemGroup>
@@ -110,6 +111,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="DatFiles\mame4all-no-clones-no-neogeo.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="install-remote-retropie-client.sh" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\WinSCP.5.17.7\build\WinSCP.targets" Condition="Exists('..\packages\WinSCP.5.17.7\build\WinSCP.targets')" />

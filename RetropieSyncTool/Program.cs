@@ -106,7 +106,7 @@ namespace RetropieSyncTool
             //RunRomTests();
             //RunRandomRom("192.168.1.117");
             RunRandomRom("192.168.0.147");
-            return;
+            //return;
             //RunRom("192.168.1.149", "/home/pi/RetroPie/roms/mame-libretro/mame2003/tmek.zip");
 
             //ExecuteSSHCommands("192.168.1.148", new string[] {  command });
