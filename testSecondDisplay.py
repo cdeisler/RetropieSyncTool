@@ -19,7 +19,19 @@ def main():
     print('Step 3')
     print('     Continue some logic while QT running in background')
     time.sleep(2)
+        
+    # all_screens = QApplication.instance().screens()
+    # for s in all_screens:
 
+        # print()
+        # print(s.name())
+        # print(s.availableGeometry())
+        # print(s.availableGeometry().width())
+        # print(s.availableGeometry().height())
+        # print(s.size())
+        # print(s.size().width())
+        # print(s.size().height())
+        
     print('Step 4')
     print('     Update the displayed image in the QT app running in background')
     myapp.emit_image_update('/home/kiosk/PieMarquee2/marquee/system/maintitle.png')
@@ -74,7 +86,7 @@ class qtAppWidget (QLabel):
         # Get avaliable screens/monitors
         # https://doc.qt.io/qt-5/qscreen.html
         # Get info on selected screen 
-        self.selected_screen = 0            # Select the desired monitor/screen
+        self.selected_screen = 1            # Select the desired monitor/screen
 
         self.screens_available = self.app.screens()
         self.screen = self.screens_available[self.selected_screen]
@@ -95,7 +107,11 @@ class qtAppWidget (QLabel):
         # Hide mouse cursor 
         self.app_widget.setCursor(Qt.BlankCursor)       
 
-        self.app_widget.setGeometry(0, 0, self.screen_width, self.screen_height)            # Set the size of Qlabel to size of the screen
+        monitor = QDesktopWidget().screenGeometry(self.selected_screen)
+        #widget.move(monitor.left(), monitor.top())
+
+
+        self.app_widget.setGeometry(monitor.left(), monitor.top(), monitor.width(), monitor.height())            # Set the size of Qlabel to size of the screen
         self.app_widget.setWindowTitle('myImageDisplayApp')
         self.app_widget.setAlignment(Qt.AlignLeft | Qt.AlignTop) #https://doc.qt.io/qt-5/qt.html#AlignmentFlag-enum                         
         self.app_widget.setPixmap(self.pixmap)
@@ -103,6 +119,7 @@ class qtAppWidget (QLabel):
 
         # Set the screen on which widget is on
         self.app_widget.windowHandle().setScreen(self.screen)
+
         # Make full screen 
         self.app_widget.showFullScreen()
 
