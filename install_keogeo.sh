@@ -73,7 +73,7 @@ sudo apt-get -y purge cloud-init
 sudo rm -rf /etc/cloud/ && sudo rm -rf /var/lib/cloud/
 
 
-packages=("net-tools" "wpasupplicant" "unclutter" "git" "build-essential")
+packages=("net-tools" "wpasupplicant" "unclutter" "git" "build-essential", "python3-pyqt5")
 
 # Iterate over packages and install or update if necessary
 for package in "${packages[@]}"; do
@@ -121,6 +121,9 @@ cd libretro-super
 ./libretro-build.sh fbneo
 
 #sudo ./retroarch -L /home/kiosk/libretro-super/dist/unix/fbneo_libretro.so /home/kiosk/roms/arcade/kof96.zip
+
+
+#sudo apt-get install -y python3-pyqt5
 
 
 
